@@ -9,10 +9,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
+import mytools as mt
 
 # caricamento insieme dati e verifica tipo delle colonne
 
-data = pd.read_csv('./Dati_Albignasego/wholeperiod.csv')
+data = pd.read_csv('./Dati_Albignasego/Whole period.csv')
 print(data.head())
 print('\n Data Types:')
 print(data.dtypes)
@@ -22,7 +23,7 @@ print(data.dtypes)
 # Faccio in modo che la data sia letta per ottenere una serie temporale
 
 dateparse = lambda dates: dt.datetime.strptime(dates, '%Y-%m-%d')
-data = pd.read_csv('./Dati_Albignasego/wholeperiod.csv', parse_dates=['DATA'], index_col=['DATA'],date_parser=dateparse)
+data = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col=0,date_parser=dateparse)
 print('\n Date ordinate:')
 print(data.head())
 print(data.index)
@@ -44,7 +45,6 @@ plt.xlabel('Data')
 plt.show()
 
 #%%
-
 #Test per constatare la stazionarietà di una serie
 
 mt.test_stationarity(ts, 12, True)
