@@ -23,10 +23,10 @@ print(data.dtypes)
 # Faccio in modo che la data sia letta per ottenere una serie temporale
 
 dateparse = lambda dates: dt.datetime.strptime(dates, '%Y-%m-%d')
-data = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col=0,date_parser=dateparse)
-print('\n Date ordinate:')
-print(data.head())
-print(data.index)
+data = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col=0, date_parser=dateparse)
+#print('\n Date ordinate:')
+#print(data.head())
+#print(data.index)
 
 ts_maglie = data['MAGLIE']
 ts_camicie = data['CAMICIE']
@@ -34,37 +34,23 @@ ts_gonne = data['GONNE']
 ts_pantaloni = data['PANTALONI']
 ts_vestiti = data['VESTITI']
 ts_giacche = data['GIACCHE']
+
+ts_totale = ts_maglie + ts_camicie + ts_gonne + ts_pantaloni + ts_vestiti + ts_giacche
+print(ts_totale.head())
+
 #print(ts_maglie.head(10),'\n')
 
-#Per ora mi occupo solo di MAGLIE
-ts = ts_maglie #solo per comodità nella manipolazione dei dati...
+#Per ora mi occupo del totale vendite
+ts = ts_totale #solo per comodità nella manipolazione dei dati...
 
+plt.figure(num=1, figsize=(40, 40), dpi=80, facecolor='w', edgecolor='k')
 plt.plot(ts)
-plt.ylabel('#Maglie')
+plt.ylabel('#Capi venduti')
 plt.xlabel('Data')
 plt.show()
 
-#%%
 #Test per constatare la stazionarietà di una serie
 
-mt.test_stationarity(ts, 12, True)
+mt.test_stationarity(ts, 12, True, 311)
 
-#%%
-
-#Rendo la serie stazionaria (2 metodi differenti)
-
-ts_stazionaria_stagionale = mt.make_seasonal_stationary(ts, 12, False)
-print('Dopo trasformazione Moving Average:\n')
-mt.test_stationarity(ts_stazionaria_stagionale, 12, True)
-
-ts_stazionaria_esponenziale = mt.make_exponential_stationary(ts, 12, False)
-print('Dopo trasformazione Exponentially Weighted Moving Average:\n')
-mt.test_stationarity(ts_stazionaria_esponenziale, 12, True)
-
-ts_decomposta = mt.decompose(ts)
-print('Dopo decomposizione (residui):\n')
-mt.test_stationarity(ts_decomposta, 12, True)
-
-#%%
-
-mt.ac_pac_function(ts_stazionaria_esponenziale)
+mt.ac_pac_function(ts, 312, 313)

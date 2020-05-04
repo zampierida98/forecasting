@@ -11,8 +11,9 @@ from statsmodels.tsa.arima_model import ARIMA
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
-def test_stationarity(timeseries, temporalwindow, boolprint):
+def test_stationarity(timeseries, temporalwindow, boolprint, position):
     
     """
     Utilizza il metodo Dickey-Fuller per ricavare i dati sulla stazionarietà
@@ -23,6 +24,7 @@ def test_stationarity(timeseries, temporalwindow, boolprint):
         timeseries -> la serie temporale (dataframe)
         temporalwindow -> la finestra temporale per calcolare media e dev std in movimento (int)
         boolprint -> true per stampare il grafico con media e dev std, false se non mi interessa stampare (bool)
+        position -> intero riga/colonna/cella, max 9 celle
     """
     
     #Determina media e deviazione standard (rolling)
@@ -31,6 +33,7 @@ def test_stationarity(timeseries, temporalwindow, boolprint):
 
     # Plot rolling statistiche (media e deviazione standard (sqrt di varianza) in movimento):
     if(boolprint):
+        plt.subplot(position)
         plt.plot(timeseries, color='blue', label='Original')
         plt.plot(rolmean, color='red', label='Rolling Mean')
         plt.plot(rolstd, color='black', label='Rolling Std')
@@ -158,7 +161,7 @@ def decompose(timeseries):
     ts_log_decompose.dropna(inplace=True)
     return ts_log_decompose
 
-def ac_pac_function(timeseries):
+def ac_pac_function(timeseries, position1, position2):
     
     """
     Calcola le funzioni di autocorrelazione e autocorrelazione parziale di una serie temporale.
@@ -166,13 +169,15 @@ def ac_pac_function(timeseries):
     Parametri:
     -----------------
         timeseries -> la serie temporale resa stazionaria con un metodo qualsiasi (dataframe)
+        position1 -> posizione del grafico acf intero riga/colonna/cella, max 9 celle
+        position2 -> posizione del grafico pacf intero riga/colonna/cella, max 9 celle
     """
     
     lag_acf = acf(timeseries, nlags=20)
     lag_pacf = pacf(timeseries, nlags=20, method='ols')
     
     #Plot ACF: 
-    plt.subplot(121) 
+    plt.subplot(position1) 
     plt.plot(lag_acf)
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
@@ -181,7 +186,7 @@ def ac_pac_function(timeseries):
     plt.title('Autocorrelation Function')
     
     #Plot PACF:
-    plt.subplot(122)
+    plt.subplot(position2)
     plt.plot(lag_pacf)
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
