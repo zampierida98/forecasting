@@ -46,6 +46,14 @@ def timeplot(ts, label='', linestyle='-'):
     plt.legend(loc='best');
     plt.show()
 
+def plotAcf(ts):
+    plt.figure(figsize=(12,6))
+    plt.plot(acf(ts))
+    plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='red')
+    plt.axhline(y=0, linestyle="--", color="red")
+    plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='red')
+    plt.show()
+
 
 if __name__ == "__main__":
     # COLONNE
@@ -67,7 +75,7 @@ if __name__ == "__main__":
     
     # Cerchiamo di capire se la serie è stagionale e/o presenta trend dalla funzione acf
     
-    
+    plotAcf(maglie)
     
     # Definiamo il training set 80% dati
     '''t_maglie = maglie[pd.date_range(start=dataframe.index[0], 
