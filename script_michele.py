@@ -208,14 +208,13 @@ def strength_seasonal_trend(ts):
     return (strength_seasonal, strength_trend)
 
 if __name__ == "__main__":
-    # COLONNE #,MAGLIE,CAMICIE,GONNE,PANTALONI,VESTITI,GIACCHE
-    
-    #Whole period.csv
-    dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
-    dataframe = pd.read_csv('Dati_Albignasego/Whole period.csv',index_col = 0, date_parser=dateparser)
+        #Whole period.csv
+        dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
+        dataframe = pd.read_csv('Dati_Albignasego/Whole period.csv',index_col = 0, date_parser=dateparser)
     
     # Analizziamo i dati graficamente
-    for column in dataframe:
+    #for column in dataframe:
+        column = 'MAGLIE'
         timeplot(ts=dataframe[column], label=column)
         # Recuperiamo una serie temporale
         serie = dataframe[column]
@@ -288,12 +287,29 @@ if __name__ == "__main__":
         
         h = 50  # orizzonte
         
+        
         previsione, _ ,intervallo = best_result_model.forecast(steps=h)
+        
         plt.figure(figsize=(40, 20), dpi=80)
         plt.plot(best_arima_model, color="green", label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
         plt.plot(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), 
-                 previsione, linestyle='--',color='red', label='Previsioni')
-        plt.plot(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), 
-                 intervallo, linestyle='--', color='red')
+                 previsione, linestyle='-',color='red', label='Previsioni')
+        #plt.plot(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), intervallo, linestyle='-', color='red')
+        intervallo_sup = [0.0] * len(intervallo)
+        intervallo_inf = [0.0] * len(intervallo)
+        ind = 0
+        for n in intervallo[:, [0]]:
+            intervallo_sup[ind] = float(n)
+            ind+=1
+        
+        ind = 0
+        for n in intervallo[:, [1]]:
+            intervallo_inf[ind] = float(n)
+            ind+=1
+        
+        plt.fill_between(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), 
+                         intervallo_sup, 
+                         intervallo_inf, 
+                         color='k', alpha=.25)
         plt.legend(loc='best');
         plt.show()
