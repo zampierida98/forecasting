@@ -42,16 +42,21 @@ print(ts_totale.head())
 
 #Per ora mi occupo del totale vendite
 ts = ts_totale #solo per comodità nella manipolazione dei dati...
+plt.figure(figsize=(40, 20), dpi=80)
 
-plt.figure(num=1, figsize=(40, 40), dpi=80, facecolor='w', edgecolor='k')
-plt.plot(ts)
+plt.title(label='Serie temporale iniziale')
 plt.ylabel('#Capi venduti')
 plt.xlabel('Data')
-plt.show()
+plt.plot(ts)
 
+#%%
 #Test per constatare la stazionarietà di una serie
+#Grafici di autocorrelazione e autocorrelazione parziale
 
-mt.test_stationarity(ts, 12, True, 311)
+mt.test_stationarity(ts, 12, True)
+mt.ac_pac_function(ts)
 
-mt.ac_pac_function(ts, 312, 313)
+#%%
+
+ts_diff = mt.differencing(ts)
 

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-def test_stationarity(timeseries, temporalwindow, boolprint, position):
+def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
     
     """
     Utilizza il metodo Dickey-Fuller per ricavare i dati sulla stazionarietà
@@ -21,19 +21,20 @@ def test_stationarity(timeseries, temporalwindow, boolprint, position):
     -----------------
     Parametri:
     -----------------
-        timeseries -> la serie temporale (dataframe)
-        temporalwindow -> la finestra temporale per calcolare media e dev std in movimento (int)
-        boolprint -> true per stampare il grafico con media e dev std, false se non mi interessa stampare (bool)
-        position -> intero riga/colonna/cella, max 9 celle
+        timeseries -> la serie temporale (dataframe)\n
+        temporalwindow -> la finestra temporale per calcolare media e dev std in movimento (int)\n
+        boolprint -> true per stampare il grafico con media e dev std, false se non mi interessa stampare (bool)\n
+        position -> intero riga/colonna/cella, max 9 celle. Si può omettere per generare una nuova figure\n
     """
-    
-    #Determina media e deviazione standard (rolling)
-    rolmean = timeseries.rolling(window=temporalwindow).mean()
-    rolstd = timeseries.rolling(window=temporalwindow).std()
-
-    # Plot rolling statistiche (media e deviazione standard (sqrt di varianza) in movimento):
     if(boolprint):
-        plt.subplot(position)
+    #Determina media e deviazione standard (rolling)
+        rolmean = timeseries.rolling(window=temporalwindow).mean()
+        rolstd = timeseries.rolling(window=temporalwindow).std()
+    # Plot rolling statistiche (media e deviazione standard (sqrt di varianza) in movimento):
+        if(position != 0):
+            plt.subplot(position)
+        else:
+            plt.figure(figsize=(40, 20), dpi=80)
         plt.plot(timeseries, color='blue', label='Original')
         plt.plot(rolmean, color='red', label='Rolling Mean')
         plt.plot(rolstd, color='black', label='Rolling Std')
@@ -62,26 +63,25 @@ def make_seasonal_stationary(timeseries, temporalwindow, boolprint):
     -----------------
     Parametri:
     -----------------
-        timeseries -> la serie temporale (dataframe)
-        temporalwindow -> la finestra temporale per calcolare media in movimento (int)
-        boolprint -> true per stampare i grafici, false se non mi interessa stampare (bool)
+        timeseries -> la serie temporale (dataframe)\n
+        temporalwindow -> la finestra temporale per calcolare media in movimento (int)\n
+        boolprint -> true per stampare i grafici, false se non mi interessa stampare (bool)\n
         
     """
-    
-    ts_log = np.log(timeseries)
-    moving_avg = ts_log.rolling(window = 12).mean()
+    moving_avg = timeseries.rolling(window = temporalwindow).mean()
     #I primi 12 mesi presenteranno valore Nan in quanto non esiste una media da sottrarre...
-    ts_log_moving_avg_diff = ts_log - moving_avg
+    timeseries_moving_avg_diff = timeseries - moving_avg
     #...per questo motivo li cancello
-    ts_log_moving_avg_diff.dropna(inplace=True)
+    timeseries_moving_avg_diff.dropna(inplace=True)
     
     if(boolprint):
-        plt.plot(ts_log, color='blue', label='ts logaritmica')
-        plt.plot(moving_avg, color='red', label='moving average della ts logaritmica')
-        plt.plot(ts_log_moving_avg_diff, color='green', label='ts logaritmica - moving average')
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.plot(timeseries, color='blue', label='ts logaritmica')
+        plt.plot(timeseries, color='red', label='moving average della ts logaritmica')
+        plt.plot(timeseries_moving_avg_diff, color='green', label='ts logaritmica - moving average')
         plt.show(block=False)
         
-    return ts_log_moving_avg_diff
+    return timeseries_moving_avg_diff
 
 def make_exponential_stationary(timeseries, decayfactor, boolprint):
     
@@ -95,35 +95,43 @@ def make_exponential_stationary(timeseries, decayfactor, boolprint):
     -----------------
     Parametri:
     -----------------
-        timeseries -> la serie temporale (dataframe)
-        boolprint -> true per stampare i grafici, false se non mi interessa stampare (bool)
-        decayfactor -> valore per indicare una stima dell'exponential decay'
+        timeseries -> la serie temporale (dataframe)\n
+        boolprint -> true per stampare i grafici, false se non mi interessa stampare (bool)\n
+        decayfactor -> valore per indicare una stima dell'exponential decay'\n
     """
 
-    ts_log = np.log(timeseries)
-    expwighted_avg = ts_log.ewm(decayfactor).mean()
-    ts_log_ewma_diff = ts_log - expwighted_avg
+    expwighted_avg = timeseries.ewm(decayfactor).mean()
+    ts_log_ewma_diff = timeseries - expwighted_avg
     if(boolprint):
-        plt.plot(ts_log, color='blue', label='ts_logaritmica')
+        plt.plot(timeseries, color='blue', label='ts_logaritmica')
         plt.plot(expwighted_avg, color='red', label='exponentially weighted moving average')
         plt.plot(ts_log_ewma_diff, color='green', label='ts logaritmica - ewma')
         plt.show(block=False)
     return ts_log_ewma_diff
 
-def remove_trend(timeseries):
+def log_transform(timeseries):
     
     """
-    Rimuove il trend / migliora stazionarietà togliendo dalla serie originale (log trasformata) la stessa shiftata
+    Trasformazione logaritmica della serie originale. Non applicare se ci sono valori nulli nella serie!
     -----------------
     Parametri
     -----------------
         timeseries -> la serie temporale (dataframe)
     """
+    return np.log(timeseries)
+
+def differencing(timeseries):
     
-    ts_log = np.log(timeseries)
-    ts_log_diff = ts_log - ts_log.shift()
-    ts_log_diff.dropna(inplace=True)
-    return ts_log_diff
+    """
+    Applica una differenziazione
+    -----------------
+    Parametri:
+    -----------------
+        timeseries -> la serie temporale (dataframe)
+    """
+    differenced_ts = timeseries - timeseries.shift()
+    ts = differenced_ts.dropna(inplace=True)
+    return ts
 
 def decompose(timeseries):
     
@@ -135,15 +143,15 @@ def decompose(timeseries):
         timeseries -> la serie temporale (dataframe)
     """
     
-    ts_log = np.log(timeseries)
-    decomposition = seasonal_decompose(ts_log)
+    decomposition = seasonal_decompose(timeseries)
     
     trend = decomposition.trend
     seasonal = decomposition.seasonal
     residual = decomposition.resid
     
+    plt.figure(figsize=(40, 20), dpi=80)
     plt.subplot(411)
-    plt.plot(ts_log, label='Original')
+    plt.plot(timeseries, label='Original')
     plt.legend(loc='best')
     plt.subplot(412)
     plt.plot(trend, label='Trend')
@@ -161,37 +169,46 @@ def decompose(timeseries):
     ts_log_decompose.dropna(inplace=True)
     return ts_log_decompose
 
-def ac_pac_function(timeseries, position1, position2):
+def ac_pac_function(timeseries, pos1=0, pos2=0):
     
     """
     Calcola le funzioni di autocorrelazione e autocorrelazione parziale di una serie temporale.
     -----------------
     Parametri:
     -----------------
-        timeseries -> la serie temporale resa stazionaria con un metodo qualsiasi (dataframe)
-        position1 -> posizione del grafico acf intero riga/colonna/cella, max 9 celle
-        position2 -> posizione del grafico pacf intero riga/colonna/cella, max 9 celle
+        timeseries -> la serie temporale resa stazionaria con un metodo qualsiasi (dataframe)\n
+        pos1 -> [OPZIONALE] posizione primo subplot (intero riga/colonna/cella max 9 celle)\n
+        pos2 -> [OPZIONALE] posizione secondo subplot (intero riga/colonna/cella max 9 celle)\n
     """
     
     lag_acf = acf(timeseries, nlags=20)
     lag_pacf = pacf(timeseries, nlags=20, method='ols')
     
-    #Plot ACF: 
-    plt.subplot(position1) 
+    if pos1==0 and pos2==0:
+        plt.figure(figsize=(40, 20), dpi=80)
+        #Plot ACF: 
+        plt.subplot(211) 
+    else:
+        plt.subplot(pos1)
+        
     plt.plot(lag_acf)
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
-    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='gray')
-    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='gray')
+    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
+    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
     plt.title('Autocorrelation Function')
     
-    #Plot PACF:
-    plt.subplot(position2)
+    if pos1==0 and pos2==0:
+        #Plot PACF:
+        plt.subplot(212)
+    else:
+        plt.subplot(pos2)
+   
     plt.plot(lag_pacf)
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
-    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='gray')
-    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='gray')
+    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
+    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
     plt.title('Partial Autocorrelation Function')
     plt.tight_layout()
     
