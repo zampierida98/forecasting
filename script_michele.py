@@ -103,7 +103,7 @@ def test_stationarity(ts):
         dfoutput['Critical Value (%s)' % key] = value
     print(dfoutput);print('\n')
     
-    return dftest[0] < dftest[4]['1%']
+    return dftest[0] < dftest[4]['10%']     # Abbiamo il 90% che la serie sia stazionaria
 
 def p_QForArima(ts_diff, T, lags=40):
     '''
@@ -208,23 +208,21 @@ def strength_seasonal_trend(ts):
     return (strength_seasonal, strength_trend)
 
 if __name__ == "__main__":
-        #Whole period.csv
-        dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
-        dataframe = pd.read_csv('Dati_Albignasego/Whole period.csv',index_col = 0, date_parser=dateparser)
+    
+    dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
+    dataframe = pd.read_csv('Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
     # Analizziamo i dati graficamente
-    #for column in dataframe:
-        column = 'MAGLIE'
-        timeplot(ts=dataframe[column], label=column)
+    for column in dataframe:
         # Recuperiamo una serie temporale
-        serie = dataframe[column]
+        serie_totale = dataframe[column]
         
-        # Commento il training set dell'80% sui dati
-        '''
-        serie = serie[pd.date_range(start=dataframe.index[0], 
-                                        end=serie.index[int(len(serie) * 0.8)] , freq='D')]
-        '''
-       
+        # training set dell'80% sui dati
+        serie = serie_totale[pd.date_range(start=dataframe.index[0], 
+                                        end=serie_totale.index[int(len(serie_totale) * 0.8)] , freq='D')]
+        # Plottiamo la serie temporale
+        timeplot(ts=serie, label=column)
+        
         # Cerchiamo di capire se la serie è stagionale e/o presenta trend dalla funzione acf
         plotAcf(serie, both=True)
         
@@ -267,7 +265,6 @@ if __name__ == "__main__":
         
         # Individuiamo il miglior modello ARIMA che approssima meglio la serie temporale
         best_p, best_q, best_result_model = find_best_model(serie, d=int(not isStationary))
-        #best_p, best_q, best_result_model = (4,4,ARIMA(serie, order=(4, 0, 4)).fit(disp=-1))
         
         # Mettiamo in confronto i due modelli
         plt.figure(figsize=(40, 20), dpi=80)
@@ -293,15 +290,21 @@ if __name__ == "__main__":
         plt.figure(figsize=(40, 20), dpi=80)
         plt.plot(best_arima_model, color="green", label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
         plt.plot(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), 
-                 previsione, linestyle='-',color='red', label='Previsioni')
-        #plt.plot(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), intervallo, linestyle='-', color='red')
+                 previsione, linestyle='-',color='red', label='Previsioni', alpha=.75)
+
+        plt.plot(serie_totale[pd.date_range(
+            start=serie_totale.index[int(len(serie_totale) * 0.8)], 
+            periods=h , freq='D')], linestyle='-', 
+            color='black', label='Osservazioni reali', markersize=7)
+        
         intervallo_sup = [0.0] * len(intervallo)
         intervallo_inf = [0.0] * len(intervallo)
+        
+        # Normalizzo gli array
         ind = 0
         for n in intervallo[:, [0]]:
             intervallo_sup[ind] = float(n)
             ind+=1
-        
         ind = 0
         for n in intervallo[:, [1]]:
             intervallo_inf[ind] = float(n)
@@ -310,6 +313,6 @@ if __name__ == "__main__":
         plt.fill_between(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), 
                          intervallo_sup, 
                          intervallo_inf, 
-                         color='k', alpha=.25)
+                         color='black', alpha=.25)
         plt.legend(loc='best');
         plt.show()
