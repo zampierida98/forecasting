@@ -24,7 +24,7 @@ def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
         timeseries -> la serie temporale (dataframe)\n
         temporalwindow -> la finestra temporale per calcolare media e dev std in movimento (int)\n
         boolprint -> true per stampare il grafico con media e dev std, false se non mi interessa stampare (bool)\n
-        position -> intero riga/colonna/cella, max 9 celle. Si può omettere per generare una nuova figure\n
+        position -> [OPZIONALE] intero riga/colonna/cella, max 9 celle. Si può omettere per generare una nuova figure\n
     """
     if(boolprint):
     #Determina media e deviazione standard (rolling)
@@ -116,22 +116,27 @@ def log_transform(timeseries):
     -----------------
     Parametri
     -----------------
-        timeseries -> la serie temporale (dataframe)
+        timeseries -> la serie temporale (dataframe)\n
     """
-    return np.log(timeseries)
+    timeseries = np.log(timeseries)
+    return timeseries
 
-def differencing(timeseries):
+def differencing(timeseries, period=0):
     
     """
     Applica una differenziazione
     -----------------
     Parametri:
     -----------------
-        timeseries -> la serie temporale (dataframe)
+        timeseries -> la serie temporale (dataframe)\n
+        period -> lag dello shift da applicare\n
     """
-    differenced_ts = timeseries - timeseries.shift()
-    ts = differenced_ts.dropna(inplace=True)
-    return ts
+    if period == 0:
+        timeseries = timeseries - timeseries.shift()
+    else:
+        timeseries = timeseries - timeseries.shift(period)
+    timeseries.dropna(inplace=True)
+    return timeseries
 
 def decompose(timeseries):
     
@@ -140,7 +145,7 @@ def decompose(timeseries):
     -----------------
     Parametri:
     -----------------
-        timeseries -> la serie temporale (dataframe)
+        timeseries -> la serie temporale (dataframe)\n
     """
     
     decomposition = seasonal_decompose(timeseries)
@@ -165,9 +170,9 @@ def decompose(timeseries):
     plt.tight_layout()
     plt.show(block=False)
     
-    ts_log_decompose = residual
-    ts_log_decompose.dropna(inplace=True)
-    return ts_log_decompose
+    ts_decompose = residual
+    ts_decompose.dropna(inplace=True)
+    return ts_decompose
 
 def ac_pac_function(timeseries, pos1=0, pos2=0):
     
@@ -211,6 +216,33 @@ def ac_pac_function(timeseries, pos1=0, pos2=0):
     plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
     plt.title('Partial Autocorrelation Function')
     plt.tight_layout()
+    
+def p_q_for_ARIMA(timeseries):
+    
+    """
+    Calcola gli ordini p e q per il modello ARIMA (operazione eseguibile a vista, qui è stata resa
+    automatica)
+    -----------------
+    Parametri:
+    -----------------
+        timeseries -> la serie temporale resa stazionaria con un metodo qualsiasi (dataframe)\n
+    """
+    ACF = acf(timeseries, nlags=20)
+    PACF = pacf(timeseries, nlags=20)
+    limite = 1.96/np.sqrt(len(timeseries))
+    p = 0
+    q = 0
+   
+    for i in range(0, len(PACF)):
+        if PACF[i] <= limite:
+            p = i
+            break
+    for i in range(0, len(ACF)):
+        if ACF[i] <= limite:
+            q = i
+            break
+    
+    return (p,q)
     
     
     

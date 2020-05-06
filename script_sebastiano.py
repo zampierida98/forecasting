@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
 import mytools as mt
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 # caricamento insieme dati e verifica tipo delle colonne
 
@@ -57,6 +58,31 @@ mt.test_stationarity(ts, 12, True)
 mt.ac_pac_function(ts)
 
 #%%
+#Seasonal differencing. E' stata ignorata la presenza dell'anno bisestile...
 
-ts_diff = mt.differencing(ts)
+ts_diff = mt.differencing(ts, 365)
+mt.test_stationarity(ts_diff, 365, True)
+mt.ac_pac_function(ts_diff)
+
+#%%
+
+ts_diff2 = mt.differencing(ts_diff)
+mt.test_stationarity(ts_diff2, 365, True)
+mt.ac_pac_function(ts_diff2)
+
+#%% Work in progress
+train_set, test_set= np.split(ts, [int(.67 *len(ts))])
+p, q = mt.p_q_for_ARIMA(ts)
+print(p, q) #1 1
+# fit model
+model = SARIMAX(train_set, order=(1, 2, 1))
+model_fit = model.fit(disp=False)
+# make prediction
+prediction = model_fit.predict(len(train_set), len(ts), typ='levels')
+#%%
+plt.figure(figsize=(40, 20), dpi=80)
+plt.plot(ts, color='black')
+plt.plot(prediction, color='red')
+
+
 
