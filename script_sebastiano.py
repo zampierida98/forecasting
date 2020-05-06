@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 import mytools as mt
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.arima_model import ARIMA
 
 # caricamento insieme dati e verifica tipo delle colonne
 
@@ -25,9 +26,6 @@ print(data.dtypes)
 
 dateparse = lambda dates: dt.datetime.strptime(dates, '%Y-%m-%d')
 data = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col=0, date_parser=dateparse)
-#print('\n Date ordinate:')
-#print(data.head())
-#print(data.index)
 
 ts_maglie = data['MAGLIE']
 ts_camicie = data['CAMICIE']
@@ -36,53 +34,64 @@ ts_pantaloni = data['PANTALONI']
 ts_vestiti = data['VESTITI']
 ts_giacche = data['GIACCHE']
 
-ts_totale = ts_maglie + ts_camicie + ts_gonne + ts_pantaloni + ts_vestiti + ts_giacche
-print(ts_totale.head())
-
-#print(ts_maglie.head(10),'\n')
+#togliere i valori nulli per applicare log!
+#ts_totale = ts_maglie + ts_camicie + ts_gonne + ts_pantaloni + ts_vestiti + ts_giacche
+ts_totale = ts_maglie
+for i in range(1, len(ts_totale)):
+    ts_totale[i] = ts_totale[i]+1
+    
+#Elimino il 29 febbraio 2016 per avere sempre periodi di 365 giorni
+ts_totale = ts_totale.drop(labels=[pd.Timestamp('2016-02-29')])
+#print(ts_totale['2016-02'])
 
 #Per ora mi occupo del totale vendite
 ts = ts_totale #solo per comodità nella manipolazione dei dati...
-plt.figure(figsize=(40, 20), dpi=80)
 
-plt.title(label='Serie temporale iniziale')
-plt.ylabel('#Capi venduti')
-plt.xlabel('Data')
-plt.plot(ts)
+#plt.figure(figsize=(40, 20), dpi=80)
+#plt.title(label='Serie temporale iniziale')
+#plt.ylabel('#Capi venduti')
+#plt.xlabel('Data')
+#plt.plot(ts)
 
-#%%
 #Test per constatare la stazionarietà di una serie
+#mt.test_stationarity(ts, 365, True)
+
 #Grafici di autocorrelazione e autocorrelazione parziale
+#mt.ac_pac_function(ts)
 
-mt.test_stationarity(ts, 12, True)
-mt.ac_pac_function(ts)
+#ts è la serie con il tale di capi venduti + 1 per giorno da cui è stato tolto il 29 febbraio 2016
+ts_log = np.log(ts)
+#mt.test_stationarity(ts_log, 365, True)
 
-#%%
-#Seasonal differencing. E' stata ignorata la presenza dell'anno bisestile...
+#Differenziazione
 
-ts_diff = mt.differencing(ts, 365)
-mt.test_stationarity(ts_diff, 365, True)
-mt.ac_pac_function(ts_diff)
-
-#%%
-
-ts_diff2 = mt.differencing(ts_diff)
-mt.test_stationarity(ts_diff2, 365, True)
-mt.ac_pac_function(ts_diff2)
+ts_diff2_log = mt.differencing(mt.differencing(ts_log, 365), 365)
+mt.test_stationarity(ts_diff2_log, 365, True)
+mt.ac_pac_function(ts_diff2_log)
 
 #%% Work in progress
-train_set, test_set= np.split(ts, [int(.67 *len(ts))])
-p, q = mt.p_q_for_ARIMA(ts)
-print(p, q) #1 1
-# fit model
-model = SARIMAX(train_set, order=(1, 2, 1))
-model_fit = model.fit(disp=False)
-# make prediction
-prediction = model_fit.predict(len(train_set), len(ts), typ='levels')
+
+#p, q = mt.p_q_for_ARIMA(ts_diff2_log)
+p=2
+q=8
+print(p, q)
+model = ARIMA(ts_diff2_log, order=(p, 0, q))
+results_ARIMA = model.fit(disp=-1)  
+#plt.plot(ts_diff2_log, color='blue', label='2-differenced logged serie')
+pd.DataFrame(ts_diff2_log).plot()
+plt.plot(results_ARIMA.fittedvalues, color='red', label='ARIMA')
+plt.title('RSS: %.4f'% sum((results_ARIMA.fittedvalues-ts_diff2_log)**2))
+
+predizione_ARIMA = pd.Series(results_ARIMA.fittedvalues, copy = True)
+
 #%%
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts, color='black')
-plt.plot(prediction, color='red')
+#riporto a originale
 
+result = results_ARIMA.fittedvalues + mt.differencing(ts_log, 365).shift(365) + ts_log.shift(365)
+result.dropna(inplace = True)
+result = np.exp(result)
+print(result.head())
 
-
+plt.figure()
+plt.plot(ts, color = 'blue', label = 'serie iniziale')
+plt.plot(result, color = 'red', label ='arima trasformato all\'indietro')
