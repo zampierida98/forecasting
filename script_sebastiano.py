@@ -65,7 +65,7 @@ ts_log = np.log(ts)
 
 #Differenziazione
 
-ts_diff2_log = mt.differencing(mt.differencing(ts_log, 365), 365)
+ts_diff2_log = mt.differencing(ts_log, 365)
 mt.test_stationarity(ts_diff2_log, 365, True)
 mt.ac_pac_function(ts_diff2_log)
 
@@ -87,11 +87,12 @@ predizione_ARIMA = pd.Series(results_ARIMA.fittedvalues, copy = True)
 #%%
 #riporto a originale
 
-result = results_ARIMA.fittedvalues + mt.differencing(ts_log, 365).shift(365) + ts_log.shift(365)
+#result = results_ARIMA.fittedvalues + mt.differencing(ts_log, 365).shift(365) + ts_log.shift(365)
+result = mt.cumulative_sums(results_ARIMA.fittedvalues, 365)
 result.dropna(inplace = True)
 result = np.exp(result)
 print(result.head())
 
-plt.figure()
+plt.figure(figsize=(40, 20), dpi=80)
 plt.plot(ts, color = 'blue', label = 'serie iniziale')
 plt.plot(result, color = 'red', label ='arima trasformato all\'indietro')

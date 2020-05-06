@@ -138,6 +138,14 @@ def differencing(timeseries, period=0):
     timeseries.dropna(inplace=True)
     return timeseries
 
+def cumulative_sums(timeseries, period=0):
+    if period == 0:
+        timeseries = timeseries + timeseries.shift()
+    else:
+        timeseries = timeseries + timeseries.shift(period)
+    timeseries.dropna(inplace=True)
+    return timeseries
+
 def decompose(timeseries):
     
     """
