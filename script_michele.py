@@ -6,6 +6,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
 import datetime 
+import statsmodels.api as sm
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf, pacf, adfuller
@@ -145,6 +146,7 @@ def p_QForArima(ts_diff, T, lags=40):
             break
     return (p,q)
 
+
 def find_best_model(ts, d=0, max_p=5, max_q=5):
     '''
     È la funzione che cerca il miglior modello ARMA per una serie temporale.
@@ -168,6 +170,7 @@ def find_best_model(ts, d=0, max_p=5, max_q=5):
     for i in range(0, max_p):
         for j in range(0, max_q):
             try:
+                print('order(%d,%d,%d)'%(i,d,j))
                 model = ARIMA(ts, order=(i, d, j)).fit(disp=-1)
                 if (model.aic < min_aic):
                     p=i
@@ -178,7 +181,7 @@ def find_best_model(ts, d=0, max_p=5, max_q=5):
                 continue
     return (p,q, result_model)
 
-def strength_seasonal_trend(ts):
+def strength_seasonal_trend(ts, season=12):
     '''
     La funzione calcola, sfruttando la decomposizione delle ts, la forza della
     stagionalità e del trend
@@ -196,7 +199,7 @@ def strength_seasonal_trend(ts):
         Grado del trend
 
     '''
-    decomposition = seasonal_decompose(ts, period=365)
+    decomposition = seasonal_decompose(ts, period=season)
     
     trend = decomposition.trend
     seasonal = decomposition.seasonal
@@ -212,12 +215,13 @@ if __name__ == "__main__":
     dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
     dataframe = pd.read_csv('Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
+    
     # Analizziamo i dati graficamente
     for column in dataframe:
         # Recuperiamo una serie temporale
         serie_totale = dataframe[column]
         
-        # training set dell'80% sui dati
+        # tiriamo fuori il training set dell'80% sui dati
         serie = serie_totale[pd.date_range(start=dataframe.index[0], 
                                         end=serie_totale.index
                                         [int(len(serie_totale) * 0.8)], 
@@ -225,14 +229,18 @@ if __name__ == "__main__":
         # Plottiamo la serie temporale
         #timeplot(ts=serie, label=column)
         
+        len_lag = int(len(serie)/3)
+        season = 365   # Determinata da vari test
+                
         # Cerchiamo di capire se la serie è stagionale e/o presenta trend dalla funzione acf
         plotAcf(serie, both=True) #, lags=int(len(serie)/3)
         
+        
         # Forza delle componenti stagionalità e trend
-        strength_s, strength_t = strength_seasonal_trend(serie)
+        strength_s, strength_t = strength_seasonal_trend(serie, season)
         print('Forza dei gradi stagionalita (%s), trend(%s)'%(str(strength_s), str(strength_t)))
         
-        #%%        
+        
         # Dal grafico della funzione ACF osserviamo che serie presenta stagionalità
         isStationary = test_stationarity(serie)
         
@@ -240,57 +248,74 @@ if __name__ == "__main__":
             print('La serie temporale %s è stazionaria'%column)
         else:
             print('La serie temporale %s NON è stazionaria'%column)
+            
+        # cerco di ridurre gli effetti di casualità per avere una serie più uniforme
+        serie = serie.rolling(3).mean()
+        timeplot(serie, 'Nuova serie ' + column + ' con rolling(3).mean()')        
+
+        serie_seasonal_diff = serie.diff(periods=season)
+        serie_seasonal_diff.dropna(inplace=True)
         
-        # Visto che la serie delle serie è stazionaria allora allora per ARIMA d=0
-        # Determiniamo dunque il valore di p e q con le funzioni ACF e PACF su la serie differenziata
-        # p = il valore di k dove la pacf interseca con 1.96/sqrt(T)
-        # q = il valore di k dove la acf interseca con 1.96/sqrt(T)
-        serie_diff=serie.diff()
+        serie_diff = serie_seasonal_diff.diff(periods=season)
         serie_diff.dropna(inplace=True)
-        plotAcf(serie_diff, both=True)
+        
+        # plotAcf(serie_diff, both=True)
+        plotAcf(serie_seasonal_diff, both=True)
         
         # Definiamo dunque il modello ARIMA    
-        p,q = p_QForArima(serie_diff, len(serie))
+        #p_QForArima(serie_seasonal_diff, len(serie))
+        p,q = 2,1
         
-        model = ARIMA(serie, order=(p, int(not isStationary), q))
+        model = ARIMA(serie_seasonal_diff, order=(p, 0, q))
         results_arima = model.fit(disp=-1)
-        
-        # Ricordo che essendo la serie stazionaria non devo fare le somme cumulative
         arima_model = pd.Series(results_arima.fittedvalues, copy=True)
         
         # Plottamo grafico normale e arima_model
         plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(serie, color='black', label=column)
+        plt.plot(serie_seasonal_diff, color='black', label=column)
         plt.plot(arima_model, color='red', label='Modello ARIMA(' + str(p) + ',' + str(int(not isStationary)) + ',' + str(q) +')')
         plt.legend(loc='best');
         plt.show()
         
+        
         # Individuiamo il miglior modello ARIMA che approssima meglio la serie temporale
-        best_p, best_q, best_result_model = find_best_model(serie, d=int(not isStationary))
+        best_p, best_q, best_result_model = find_best_model(serie_seasonal_diff, d=0)
         
         # Mettiamo in confronto i due modelli
         plt.figure(figsize=(40, 20), dpi=80)
         plt.subplot(211)
-        plt.plot(serie, label=column, color='black')
-        plt.plot(arima_model,color='red', label='Modello ARIMA(' + str(p) + ',' + str(int(not isStationary)) + ',' + str(q) +')')
+        plt.plot(serie_seasonal_diff, label=column, color='black')
+        plt.plot(arima_model,color='red', label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')')
         plt.legend(loc='best');
         plt.subplot(212)
-        plt.plot(serie, label=column, color='black')
+        plt.plot(serie_seasonal_diff, label=column, color='black')
         best_arima_model = pd.Series(best_result_model.fittedvalues, copy=True)
-        plt.plot(best_arima_model, color='green', label='Modello ARIMA(' + str(best_p) + ',' + str(int(not isStationary)) + ',' + str(best_q) +')')
+        plt.plot(best_arima_model, color='green', label='Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')')
         plt.legend(loc='best');
         plt.show()
         
+        best_arima_model_diff = pd.Series(best_result_model.fittedvalues, copy=True)
+        best_arima_model_diff_cumsum = pd.Series(best_result_model.fittedvalues, copy=True)
         
+        for i in range(season, len(best_arima_model_diff)):
+            best_arima_model_diff_cumsum[i] += best_arima_model_diff_cumsum[i - season]
+
+        best_arima = pd.Series(serie[0:season-1], index=serie.index)
+        best_arima = best_arima.add(best_arima_model_diff_cumsum, fill_value=0)
+        
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.plot(serie, color='black')
+        plt.plot(best_arima, color='green')
+        plt.show()    
+        
+        '''
         # Usiamo il miglior modello per fare le previsioni
-        
         h = 50  # orizzonte
-        
         
         previsione, _ ,intervallo = best_result_model.forecast(steps=h)
         
         plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(best_arima_model, color="green", label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
+        plt.plot(best_arima, color="green", label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
         plt.plot(pd.date_range(start=serie.index[len(serie) - 1], periods=h , freq='D'), 
                  previsione, linestyle='-',color='red', label='Previsioni', alpha=.75)
 
@@ -317,4 +342,4 @@ if __name__ == "__main__":
                          intervallo_inf, 
                          color='black', alpha=.25)
         plt.legend(loc='best');
-        plt.show()
+        plt.show()'''
