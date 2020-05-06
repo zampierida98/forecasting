@@ -231,10 +231,19 @@ def arima_forecasting(timeseries, h):
     results = mod.fit()
     print(results.summary())
     
-    pred = results.predict(len(timeseries), len(timeseries)+h-1)
+    pred = results.forecast(h) # tuple (forecast, stderr, conf_int)
+    
+    future_dates = pd.date_range(start=timeseries.index[len(timeseries)-1], periods=h, freq='D')
+    future_series = pd.Series(data=pred[0], index=future_dates)
+    future_series_ci_min = pd.Series(data=pred[2][:, 0], index=future_dates)
+    future_series_ci_max = pd.Series(data=pred[2][:, 1], index=future_dates)
+    forecasts = pd.concat([future_series, future_series_ci_min, future_series_ci_max], axis=1)
     
     ax = timeseries.plot(label='Observed', figsize=(40,20))
-    pred.plot(ax=ax, label='Forecast')
+    forecasts[0].plot(ax=ax, label='Forecast')
+    ax.fill_between(forecasts.index,
+                    forecasts[1],
+                    forecasts[2], color='k', alpha=.25)
     plt.legend()
     plt.show()
 
