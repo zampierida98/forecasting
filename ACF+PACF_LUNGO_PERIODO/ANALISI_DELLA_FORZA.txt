@@ -1,0 +1,27 @@
+PERIODO 7
+
+Forza dei gradi stagionalita (0.328589755041895), trend(0.6799896212423777)
+Forza dei gradi stagionalita (0.26537744977695166), trend(0.7469879272049003)
+Forza dei gradi stagionalita (0.08745772127449869), trend(0.5042854272956632)
+Forza dei gradi stagionalita (0.2762377655659881), trend(0.6967557699645661)
+Forza dei gradi stagionalita (0.28345539758147664), trend(0.6438012437642137)
+Forza dei gradi stagionalita (0.2582032996342104), trend(0.6424527304190591)
+
+
+PERIODO 187
+
+Forza dei gradi stagionalita (0.45188925971777805), trend(0.1331561233987243)
+Forza dei gradi stagionalita (0.34509506830727676), trend(0.3811483379987892)
+Forza dei gradi stagionalita (0.2559953686416637), trend(0.040478378754208566)
+Forza dei gradi stagionalita (0.42583698357192046), trend(0.2014410880348375)
+Forza dei gradi stagionalita (0.3886242427264386), trend(0.14562917589339253)
+Forza dei gradi stagionalita (0.4692180398111967), trend(0.08839223756517611)
+
+PERIODO 365
+
+Forza dei gradi stagionalita (0.6002188215217722), trend(0.03872350006789216)
+Forza dei gradi stagionalita (0.6493966370082518), trend(0.16974989166878474)
+Forza dei gradi stagionalita (0.38021604573098766), trend(0.02253478953060828)
+Forza dei gradi stagionalita (0.5625066447262653), trend(0.18747848456141658)
+Forza dei gradi stagionalita (0.5229210976890445), trend(0.09017306281332138)
+Forza dei gradi stagionalita (0.5760812456172699), trend(0.059973417784785266)

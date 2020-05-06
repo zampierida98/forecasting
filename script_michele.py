@@ -52,7 +52,7 @@ def plotAcf(ts, isPacf=False, both=False, lags=40):
     -------
     None.
     '''
-    auto_cor = acf(ts, nlags=lags)
+    auto_cor = acf(ts, nlags=lags, fft=True)
     part_auto_cor = pacf(ts, nlags=lags)
     
     plt.figure(figsize=(12,6))    
@@ -128,7 +128,7 @@ def p_QForArima(ts_diff, T, lags=40):
     '''
     p = 0
     q = 0
-    auto_cor = acf(ts_diff, nlags=lags)
+    auto_cor = acf(ts_diff, nlags=lags, fft=True)
     part_auto_cor = pacf(ts_diff, nlags=lags)
     
     # Upper bound: 1.96/sqrt(T)
@@ -140,7 +140,7 @@ def p_QForArima(ts_diff, T, lags=40):
             p = i
             break
     for i in range(0, len(auto_cor)):
-        if part_auto_cor[i] <= bound:
+        if auto_cor[i] <= bound:
             q = i
             break
     return (p,q)
@@ -196,7 +196,7 @@ def strength_seasonal_trend(ts):
         Grado del trend
 
     '''
-    decomposition = seasonal_decompose(ts)
+    decomposition = seasonal_decompose(ts, period=365)
     
     trend = decomposition.trend
     seasonal = decomposition.seasonal
@@ -219,19 +219,21 @@ if __name__ == "__main__":
         
         # training set dell'80% sui dati
         serie = serie_totale[pd.date_range(start=dataframe.index[0], 
-                                        end=serie_totale.index[int(len(serie_totale) * 0.8)] , freq='D')]
+                                        end=serie_totale.index
+                                        [int(len(serie_totale) * 0.8)], 
+                                        freq='D')]
         # Plottiamo la serie temporale
-        timeplot(ts=serie, label=column)
+        #timeplot(ts=serie, label=column)
         
         # Cerchiamo di capire se la serie è stagionale e/o presenta trend dalla funzione acf
-        plotAcf(serie, both=True)
+        plotAcf(serie, both=True) #, lags=int(len(serie)/3)
         
         # Forza delle componenti stagionalità e trend
         strength_s, strength_t = strength_seasonal_trend(serie)
         print('Forza dei gradi stagionalita (%s), trend(%s)'%(str(strength_s), str(strength_t)))
         
-        # Dal grafico della funzione ACF osserviamo che serie presenta sia un trend
-        # sia una stagionalità
+        #%%        
+        # Dal grafico della funzione ACF osserviamo che serie presenta stagionalità
         isStationary = test_stationarity(serie)
         
         if (isStationary):
