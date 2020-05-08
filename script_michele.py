@@ -212,7 +212,7 @@ def strength_seasonal_trend(ts, season=12):
 
 if __name__ == "__main__":
     len_lag = 150
-    season = 365     
+    season = 365
     dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
     dataframe = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
@@ -222,6 +222,9 @@ if __name__ == "__main__":
         serie_totale = dataframe[column]
         # tiriamo fuori il training set dell'80% sui dati
         serie = serie_totale[pd.date_range(start=dataframe.index[0], end=serie_totale.index[int(len(serie_totale) * 0.8)], freq='D')]
+        
+        # Eliminiamo il 29 Febbraio al fine di recuperare poi la componenete stagionale 
+        serie = serie.drop(labels=[pd.Timestamp('2016-02-29')])
         
         # Plottiamo la serie temporale
         timeplot(ts=serie, label=column)
@@ -315,8 +318,35 @@ if __name__ == "__main__":
         last_observation = best_arima_model_con_stag.index[len(best_arima_model_con_stag) - 1]        
         
         ts_seasonal_forecast = pd.Series(seasonal[best_arima_model_con_stag.index], copy=True)
-        ts_seasonal_forecast = ts_seasonal_forecast.add(seasonal[pd.date_range(start=last_observation, periods=h , freq='D')], fill_value=0)
-
+        #ts_seasonal_forecast = ts_seasonal_forecast.add(seasonal[pd.date_range(start=last_observation, periods=h , freq='D')], fill_value=0)
+        
+        # Previsione sulla parte stagionale usando la parte stagionale "periodica"
+        ts_seasonal_forecast = pd.Series(seasonal[best_arima_model_con_stag.index], copy=True)
+        
+        # Devo calcolare le previsioni sulla componente stagionale
+        tmp = [0.0] * h                         # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+        start = len(ts_seasonal_forecast)       # rappresenta l'osservazione futura da prevedere
+        
+        for i in range(0, h): # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+            ind = start
+            #tmp[i] = seasonal[i - season]  # seasonal naif
+            
+            alpha = 0.9 # sommatoria in media exp
+            ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            tmp[i] += seasonal[ind]
+            exp = 1
+            while (ind >= 0):
+                tmp[i] += seasonal[ind] * ((1 - alpha) ** exp)
+                exp += 1
+                ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            
+            start += 1 # questo arriverà fino a t+h
+            tmp[i] = tmp[i]
+            
+        
+        ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=last_observation, periods=h , freq='D'))
+        ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)#seasonal[pd.date_range
+        
         # Previsioni sulla parte de-stagionata
         previsione, _ ,intervallo = best_result_model.forecast(steps=h)
         
