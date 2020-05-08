@@ -8,7 +8,7 @@ Forza dei gradi stagionalita (0.28345539758147664), trend(0.6438012437642137)
 Forza dei gradi stagionalita (0.2582032996342104), trend(0.6424527304190591)
 
 
-PERIODO 187
+PERIODO 365/2
 
 Forza dei gradi stagionalita (0.45188925971777805), trend(0.1331561233987243)
 Forza dei gradi stagionalita (0.34509506830727676), trend(0.3811483379987892)
