@@ -14,8 +14,6 @@ import datetime as dt
 import warnings
 import itertools
 
-# %% Definizione funzioni
-
 
 def load_data(filename):
     """
@@ -128,7 +126,7 @@ def order_selection(timeseries):
     return [model.order, model.seasonal_order]
 
 
-def iterative_order_selection(timeseries, min_order, max_order):
+def iterative_order_selection(timeseries, min_order=2, max_order=5):
     """
     Selezione iterativa degli ordini (p,d,q) per ARIMA
 
@@ -137,9 +135,9 @@ def iterative_order_selection(timeseries, min_order, max_order):
     timeseries : Series
         la serie temporale
     min_order : int
-        l'ordine minimo da considerare
+        l'ordine minimo da considerare (default 2)
     max_order : int
-        l'ordine massimo da considerare
+        l'ordine massimo da considerare (default 5)
 
     Returns
     -------
@@ -164,7 +162,7 @@ def iterative_order_selection(timeseries, min_order, max_order):
         except:
             continue # ignore the parameter combinations that cause issues
     
-    min_aic = np.min(aics)
+    #min_aic = np.min(aics)
     index_min_aic = np.argmin(aics)
     return orders[index_min_aic]
 
@@ -223,10 +221,11 @@ def arima_forecasting(timeseries, h):
 
     Returns
     -------
-    None.
+    DataFrames
+        la serie temporale basata sui risultati del forecast sul modello ARIMA
 
     """
-    o = iterative_order_selection(timeseries,0,2)
+    o = iterative_order_selection(timeseries)
     mod = ARIMA(timeseries, order=o)
     results = mod.fit()
     print(results.summary())
@@ -246,6 +245,8 @@ def arima_forecasting(timeseries, h):
                     forecasts[2], color='k', alpha=.25)
     plt.legend()
     plt.show()
+    
+    return forecasts
 
 
 # %% Main
@@ -273,3 +274,19 @@ if __name__ == '__main__':
     
     # forecasting con ARIMA (basato sugli orders ottenuti minimizzando AIC):
     arima_forecasting(ts, 50)
+    
+    # TODO: funzione accuracy
+    train = data[:'2016']
+    test = data['2017':]
+    arima_forecasts = arima_forecasting(train['MAGLIE'], len(ts)-len(train))
+    
+    ax = ts.plot(label='Test', figsize=(40,20))
+    arima_forecasts[0].plot(ax=ax, label='Train forecast', alpha=.7)
+    ax.fill_between(arima_forecasts.index,
+                    arima_forecasts[1],
+                    arima_forecasts[2], color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    mse = ((arima_forecasts[0] - test['MAGLIE']) ** 2).mean()
+    print('The Mean Squared Error of our forecasts is {}'.format(round(mse, 2)))
