@@ -132,19 +132,33 @@ def differencing(timeseries, period=0):
         period -> lag dello shift da applicare\n
     """
     if period == 0:
-        timeseries = timeseries - timeseries.shift()
+        timeseries = timeseries.diff()
     else:
         timeseries = timeseries - timeseries.shift(period)
     timeseries.dropna(inplace=True)
     return timeseries
 
-def cumulative_sums(timeseries, period=0):
-    if period == 0:
-        timeseries = timeseries + timeseries.shift()
-    else:
-        timeseries = timeseries + timeseries.shift(period)
-    timeseries.dropna(inplace=True)
-    return timeseries
+def cumulative_sums(ts_diff, season, ts_iniz):
+    
+    """
+    Restituisce la serie pre-differenziazione. Funziona anche cancellando il 29 di Febbraio.
+    -----------------
+    Parametri:
+    -----------------
+        ts_diff -> la serie temporale differenziata (dataframe)\n
+        season -> l'offset temporale applicato per differenziare la serie
+        ts_iniz -> la serie temporale che ha subito la differenziazione
+    """
+
+    restored = ts_iniz.copy()
+    restored.iloc[season:] = np.nan
+    counter = 0
+    for d, val in ts_diff.iloc[season:].iteritems():
+        restored[d] = restored.iloc[counter-season]+val
+        counter+=1
+    
+    return restored
+      
 
 def decompose(timeseries):
     
