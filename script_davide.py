@@ -263,7 +263,23 @@ def arima_forecasting(timeseries, h):
     return forecasts
 
 
-def accuracy(timeseries, end_train):
+def accuracy_arima(timeseries, end_train):
+    """
+    Verifica visuale dell'accuratezza di un modello ARIMA
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    end_train : str
+        l'ultimo anno da considerare nel set di train
+
+    Returns
+    -------
+    float
+        RMSE
+
+    """
     # spezzo la serie temporale in due set (train e test)
     train = timeseries[:end_train]
     test = timeseries[str(int(end_train)+1):]
@@ -282,7 +298,36 @@ def accuracy(timeseries, end_train):
     
     # calcolo del RMSE
     mse = ((arima_forecasts[0] - timeseries) ** 2).mean()
-    print('The Mean Squared Error of the forecasts is {}'.format(round(mse, 2)))
+    return round(mse, 2)
+
+
+def accuracy_tbats(timeseries, forecasts):
+    """
+    Verifica visuale dell'accuratezza di un modello TBATS
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    forecasts : Series
+        la serie dei valori predetti
+
+    Returns
+    -------
+    float
+        RMSE
+
+    """
+    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    ax = timeseries.plot(label='Observed', figsize=(40,20))
+    forecasts.plot(ax=ax, label='Forecasted test', alpha=.7)
+    #ax.fill_between(forecasts.index, forecasts[1], forecasts[2], color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo del RMSE
+    mse = ((forecasts[0] - timeseries) ** 2).mean()
+    return round(mse, 2)
     
 
 # %% Main
@@ -310,6 +355,39 @@ if __name__ == '__main__':
     # forecasting con ARIMA (basato sugli orders ottenuti minimizzando AIC):
     arima_forecasting(ts, 50)
     
-    # controllo l'accuratezza delle previsioni confrontandole con la serie stessa:
-    accuracy(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+    # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
+    rmse_arima = accuracy_arima(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+
+    # forecasting con TBATS:
+    ts_to_train = ts[:'2016']
+    ts_to_test = ts['2017':]
+    
+    # fit the model:
+    estimator = TBATS(
+        seasonal_periods=[7, 365.25],
+        use_arma_errors=False,  # shall try only models without ARMA
+        use_box_cox=False  # will not use Box-Cox
+    )
+    model = estimator.fit(ts_to_train)
+    
+    # fit the model (slow):
+    #estimator_slow = TBATS(seasonal_periods=(7, 365.25))
+    #model = estimator_slow.fit(ts_to_train)
+    
+    # forecast 365 days ahead:
+    ts_forecast = model.forecast(steps=len(ts_to_test))
+    
+    # summarize fitted model:
+    print(model.summary())
+    
+    # calcolo la serie temporale dei valori predetti:
+    future_dates = pd.date_range(start=ts.index[len(ts_to_train)], periods=len(ts_to_test), freq='D')
+    future_series = pd.Series(data=ts_forecast, index=future_dates)
+    
+    # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
+    rmse_tbats = accuracy_tbats(ts, future_series)
+    
+    # confronto gli RMSE:
+    print("ARIMA:", rmse_arima)
+    print("TBATS:", rmse_tbats)
     
