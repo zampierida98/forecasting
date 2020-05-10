@@ -5,6 +5,7 @@ Created on Wed Apr 22 14:46:48 2020
 @author: seba3
 """
 from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss
 from statsmodels.tsa.stattools import acf, pacf
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.arima_model import ARIMA
@@ -12,6 +13,26 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+
+def kpss_test(timeseries):
+    
+    """
+    Test per determinare la stazionarietà del trend.
+    -----------------
+    Parametri:
+    -----------------
+         timeseries -> la serie temporale (dataframe)\n
+    """
+    print ('Results of KPSS Test:')
+    kpsstest = kpss(timeseries, regression='c')
+    kpss_output = pd.Series(kpsstest[0:3], index=['Test Statistic','p-value','Lags Used'])
+    for key,value in kpsstest[3].items():
+        kpss_output['Critical Value (%s)'%key] = value
+    print (kpss_output)
+    if(kpss_output['Test Statistic']<kpss_output['Critical Value (1%)']):
+        print("La serie è trend stazionaria (test kpss)")
+    else:
+        print("La serie non è trend stazionaria (test kpss)")
 
 def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
     
@@ -51,6 +72,10 @@ def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
         dfoutput['Critical Value (%s)' % key] = value
     print(dfoutput)
     print('\n')
+    if(dfoutput['Test Statistic']<dfoutput['Critical Value (1%)']):
+        print("La serie è stazionaria (test Dickey-Fuller)")
+    else:
+        print("La serie non è stazionaria (test Dickey-Fuller)")
     
 def make_seasonal_stationary(timeseries, temporalwindow, boolprint):
     
@@ -124,7 +149,7 @@ def log_transform(timeseries):
 def differencing(timeseries, period=0):
     
     """
-    Applica una differenziazione
+    Applica una differenziazione (lag 1 oppure stagionale, a seconda del periodo passato)
     -----------------
     Parametri:
     -----------------
