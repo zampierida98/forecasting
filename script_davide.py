@@ -12,7 +12,7 @@ import statsmodels.api as sm
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller, acf, pacf
-from tbats import TBATS, BATS
+from tbats import TBATS
 import warnings
 
 
@@ -144,7 +144,8 @@ def sarimax_forecasting(timeseries, m, h):
 
     Returns
     -------
-    None.
+    PredictionResultsWrapper
+        le informazioni sui risultati del forecast sul modello SARIMAX
 
     """
     # realizzo il modello con gli ordini ottenuti da pmdarima
@@ -174,6 +175,8 @@ def sarimax_forecasting(timeseries, m, h):
                     pred_ci.iloc[:, 1], color='k', alpha=.25)
     plt.legend()
     plt.show()
+    
+    return pred_uc
 
 
 def iterative_order_selection(timeseries, min_order=0, max_order=4):
@@ -263,6 +266,84 @@ def arima_forecasting(timeseries, h):
     return forecasts
 
 
+def tbats_forecasting(timeseries, h, s):
+    """
+    Forecasting con TBATS
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    h : int
+        l'orizzonte
+    s : list
+        l'array delle stagionalità
+
+    Returns
+    -------
+    NumPy array
+        i valori predetti
+
+    """
+    # fit the model
+    estimator = TBATS(
+        seasonal_periods=s,
+        use_arma_errors=False,  # shall try only models without ARMA
+        use_box_cox=False  # will not use Box-Cox
+    )
+    model = estimator.fit(timeseries)
+    
+    # fit the model (slow)
+    #estimator_slow = TBATS(seasonal_periods=s)
+    #model = estimator_slow.fit(timeseries)
+    
+    # summarize fitted model
+    print(model.summary())
+    
+    return model.forecast(steps=h)
+
+
+def accuracy_sarimax(timeseries, m, end_train):
+    """
+    Verifica visuale dell'accuratezza di un modello SARIMAX
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    m : int
+        numero di osservazioni in un anno
+    end_train : str
+        l'ultimo anno da considerare nel set di train
+
+    Returns
+    -------
+    float
+        RMSE
+
+    """
+    # spezzo la serie temporale in due set (train e test)
+    train = timeseries[:end_train]
+    test = timeseries[str(int(end_train)+1):]
+    
+    # predico valori per la lunghezza del set di test
+    forecasts = sarimax_forecasting(train, m, len(test))
+    pred_ci = forecasts.conf_int()
+    
+    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    ax = timeseries.plot(label='Observed', figsize=(40,20))
+    forecasts.predicted_mean.plot(ax=ax, label='Forecasted test', alpha=.7)
+    ax.fill_between(pred_ci.index,
+                    pred_ci.iloc[:, 0],
+                    pred_ci.iloc[:, 1], color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo del RMSE
+    mse = ((forecasts.predicted_mean[0] - timeseries) ** 2).mean()
+    return round(mse, 2)
+
+
 def accuracy_arima(timeseries, end_train):
     """
     Verifica visuale dell'accuratezza di un modello ARIMA
@@ -330,10 +411,12 @@ def accuracy_tbats(timeseries, forecasts):
     return round(mse, 2)
     
 
-# %% Main
 if __name__ == '__main__':
     data = load_data('Dati_Albignasego/Whole period.csv')
     # colonne: MAGLIE, CAMICIE, GONNE, PANTALONI, VESTITI, GIACCHE
+    ts = data['CAMICIE']
+    
+    # %% Analisi di stagionalità e stazionarietà
     for col in data.columns:
         ts = data[col]
         ts_plot(ts)
@@ -348,37 +431,26 @@ if __name__ == '__main__':
         # stazionarietà:
         test_stationarity(ts) # the test statistic is smaller than the 1% critical values so we can say with 99% confidence that ts is stationary
         
+    # %% SARIMAX
     # forecasting con SARIMAX (basato sugli orders ottenuti da pmdarima):
-    ts = data['CAMICIE']
-    #sarimax_forecasting(ts, 365, 50) # dati giornalieri
+    sarimax_forecasting(ts, 7, 50) # ignoro la stagionalità annuale
     
+    # controllo l'accuratezza delle previsioni di SARIMAX confrontandole con la serie stessa:
+    rmse_sarimax = accuracy_sarimax(ts, 7, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+    
+    # %% ARIMA
     # forecasting con ARIMA (basato sugli orders ottenuti minimizzando AIC):
     arima_forecasting(ts, 50)
     
     # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
     rmse_arima = accuracy_arima(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
 
-    # forecasting con TBATS:
+    # %% TBATS
     ts_to_train = ts[:'2016']
     ts_to_test = ts['2017':]
     
-    # fit the model:
-    estimator = TBATS(
-        seasonal_periods=[7, 365.25],
-        use_arma_errors=False,  # shall try only models without ARMA
-        use_box_cox=False  # will not use Box-Cox
-    )
-    model = estimator.fit(ts_to_train)
-    
-    # fit the model (slow):
-    #estimator_slow = TBATS(seasonal_periods=(7, 365.25))
-    #model = estimator_slow.fit(ts_to_train)
-    
-    # forecast 365 days ahead:
-    ts_forecast = model.forecast(steps=len(ts_to_test))
-    
-    # summarize fitted model:
-    print(model.summary())
+    # forecasting con TBATS:
+    ts_forecast = tbats_forecasting(ts_to_train, len(ts_to_test), [7, 365.25])
     
     # calcolo la serie temporale dei valori predetti:
     future_dates = pd.date_range(start=ts.index[len(ts_to_train)], periods=len(ts_to_test), freq='D')
@@ -387,7 +459,8 @@ if __name__ == '__main__':
     # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
     rmse_tbats = accuracy_tbats(ts, future_series)
     
-    # confronto gli RMSE:
+    # %% Comparazione dei modelli
+    print("SARIMAX:", rmse_sarimax)
     print("ARIMA:", rmse_arima)
     print("TBATS:", rmse_tbats)
     
