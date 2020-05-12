@@ -303,6 +303,61 @@ def tbats_forecasting(timeseries, h, s):
     return model.forecast(steps=h)
 
 
+def fourier_forecasting(timeseries, m, end_train):
+    """
+    Forecasting con SARIMAX (with Fourier terms) e verifica dell'accuratezza
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    m : int
+        numero di osservazioni in un anno
+    end_train : str
+        l'ultimo anno da considerare nel set di train
+
+    Returns
+    -------
+    float
+        MSE
+
+    """
+    # spezzo la serie temporale in due set (train e test)
+    train = timeseries[:end_train]
+    test = timeseries[str(int(end_train)+1):]
+    
+    # preparo le variabili esogene (Fourier terms)
+    exog = pd.DataFrame({'date': timeseries.index})
+    exog = exog.set_index(pd.PeriodIndex(exog['date'], freq='D'))
+    exog['sin365'] = np.sin(2 * np.pi * exog.index.dayofyear / 365.25)
+    exog['cos365'] = np.cos(2 * np.pi * exog.index.dayofyear / 365.25)
+    exog['sin365_2'] = np.sin(4 * np.pi * exog.index.dayofyear / 365.25)
+    exog['cos365_2'] = np.cos(4 * np.pi * exog.index.dayofyear / 365.25)
+    exog = exog.drop(columns=['date'])
+    
+    exog_to_train = exog.iloc[:(len(timeseries)-len(test))]
+    exog_to_test = exog.iloc[(len(timeseries)-len(test)):]
+    
+    # realizzo il modello con gli ordini ottenuti da pmdarima
+    arima_exog_model = pm.auto_arima(y=train, exogenous=exog_to_train, seasonal=True, m=m, suppress_warnings=True, trace=True)
+    
+    # calcolo la serie temporale dei valori predetti
+    arima_exog_forecast = arima_exog_model.predict(n_periods=len(test), exogenous=exog_to_test)
+    future_dates = pd.date_range(start=ts.index[len(train)], periods=len(test), freq='D')
+    future_series = pd.Series(data=arima_exog_forecast, index=future_dates)
+    
+    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    ax = timeseries.plot(label='Observed', figsize=(40,20))
+    future_series.plot(ax=ax, label='Forecasted test', alpha=.7)
+    #ax.fill_between(forecasts.index, forecasts[1], forecasts[2], color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo del MSE
+    mse = ((future_series[0] - timeseries) ** 2).mean()
+    return round(mse, 2)
+
+
 def accuracy_sarimax(timeseries, m, end_train):
     """
     Verifica visuale dell'accuratezza di un modello SARIMAX
@@ -319,7 +374,7 @@ def accuracy_sarimax(timeseries, m, end_train):
     Returns
     -------
     float
-        RMSE
+        MSE
 
     """
     # spezzo la serie temporale in due set (train e test)
@@ -339,7 +394,7 @@ def accuracy_sarimax(timeseries, m, end_train):
     plt.legend()
     plt.show()
     
-    # calcolo del RMSE
+    # calcolo del MSE
     mse = ((forecasts.predicted_mean[0] - timeseries) ** 2).mean()
     return round(mse, 2)
 
@@ -358,7 +413,7 @@ def accuracy_arima(timeseries, end_train):
     Returns
     -------
     float
-        RMSE
+        MSE
 
     """
     # spezzo la serie temporale in due set (train e test)
@@ -377,7 +432,7 @@ def accuracy_arima(timeseries, end_train):
     plt.legend()
     plt.show()
     
-    # calcolo del RMSE
+    # calcolo del MSE
     mse = ((arima_forecasts[0] - timeseries) ** 2).mean()
     return round(mse, 2)
 
@@ -396,7 +451,7 @@ def accuracy_tbats(timeseries, forecasts):
     Returns
     -------
     float
-        RMSE
+        MSE
 
     """
     # grafico dei valori predetti in sovrapposizione con quelli del set di test
@@ -406,7 +461,7 @@ def accuracy_tbats(timeseries, forecasts):
     plt.legend()
     plt.show()
     
-    # calcolo del RMSE
+    # calcolo del MSE
     mse = ((forecasts[0] - timeseries) ** 2).mean()
     return round(mse, 2)
     
@@ -436,15 +491,15 @@ if __name__ == '__main__':
     sarimax_forecasting(ts, 7, 50) # ignoro la stagionalità annuale
     
     # controllo l'accuratezza delle previsioni di SARIMAX confrontandole con la serie stessa:
-    rmse_sarimax = accuracy_sarimax(ts, 7, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+    mse_sarimax = accuracy_sarimax(ts, 7, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
     
     # %% ARIMA
     # forecasting con ARIMA (basato sugli orders ottenuti minimizzando AIC):
     arima_forecasting(ts, 50)
     
     # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
-    rmse_arima = accuracy_arima(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
-
+    mse_arima = accuracy_arima(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+    
     # %% TBATS
     ts_to_train = ts[:'2016']
     ts_to_test = ts['2017':]
@@ -457,10 +512,14 @@ if __name__ == '__main__':
     future_series = pd.Series(data=ts_forecast, index=future_dates)
     
     # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
-    rmse_tbats = accuracy_tbats(ts, future_series)
+    mse_tbats = accuracy_tbats(ts, future_series)
+    
+    # %% SARIMAX (with Fourier terms)
+    mse_fourier = fourier_forecasting(ts, 7, '2016')
     
     # %% Comparazione dei modelli
-    print("SARIMAX:", rmse_sarimax)
-    print("ARIMA:", rmse_arima)
-    print("TBATS:", rmse_tbats)
+    print("SARIMAX:", mse_sarimax)
+    print("ARIMA:", mse_arima)
+    print("TBATS:", mse_tbats)
+    print("Fourier:", mse_fourier)
     
