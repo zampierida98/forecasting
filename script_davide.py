@@ -16,6 +16,18 @@ from statsmodels.tsa.stattools import adfuller, acf, pacf
 from tbats import TBATS
 import warnings
 
+SMALL_SIZE = 28
+MEDIUM_SIZE = 30
+BIGGER_SIZE = 32
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
 
 def load_data(filename):
     """
@@ -46,9 +58,9 @@ def ts_plot(timeseries):
     None.
 
     """
-    plt.figure(figsize=(40, 20))
+    plt.figure(figsize=(40, 20), dpi=80)
     plt.title(timeseries.name)
-    plt.plot(timeseries)
+    plt.plot(timeseries, color='black')
     plt.show()
 
 
@@ -90,7 +102,7 @@ def acf_pacf(timeseries):
     """
     lag_acf = acf(timeseries, nlags=20)
     lag_pacf = pacf(timeseries, nlags=20, method='ols')
-    plt.figure(figsize=(40, 20))
+    plt.figure(figsize=(40, 20), dpi=80)
     # plot ACF:
     plt.subplot(211)
     plt.plot(lag_acf)
@@ -169,8 +181,10 @@ def sarimax_forecasting(timeseries, m, h):
     pred_ci = pred_uc.conf_int()
     
     # grafico dei valori osservati e dei valori predetti
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    pred_uc.predicted_mean.plot(ax=ax, label='Forecast')
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(timeseries.name)
+    ax = timeseries.plot(label='Observed', color='black')
+    pred_uc.predicted_mean.plot(ax=ax, label='Forecast', color='green')
     ax.fill_between(pred_ci.index,
                     pred_ci.iloc[:, 0],
                     pred_ci.iloc[:, 1], color='k', alpha=.25)
@@ -256,8 +270,10 @@ def arima_forecasting(timeseries, h):
     forecasts = pd.concat([future_series, future_series_ci_min, future_series_ci_max], axis=1)
     
     # grafico dei valori osservati e dei valori predetti
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    forecasts[0].plot(ax=ax, label='Forecast')
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(timeseries.name)
+    ax = timeseries.plot(label='Observed', color='black')
+    forecasts[0].plot(ax=ax, label='Forecast', color='green')
     ax.fill_between(forecasts.index,
                     forecasts[1],
                     forecasts[2], color='k', alpha=.25)
@@ -348,8 +364,10 @@ def fourier_forecasting(timeseries, m, end_train):
     future_series = pd.Series(data=arima_exog_forecast, index=future_dates)
     
     # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    future_series.plot(ax=ax, label='Forecasted test', alpha=.7)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(timeseries.name)
+    ax = timeseries.plot(label='Observed', color='black')
+    future_series.plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
     #ax.fill_between(forecasts.index, forecasts[1], forecasts[2], color='k', alpha=.2)
     plt.legend()
     plt.show()
@@ -359,7 +377,7 @@ def fourier_forecasting(timeseries, m, end_train):
     return round(mse, 2)
 
 
-def prophet_forecasting(timeseries, h):
+def prophet_forecasting(timeseries, h): # TODO: da sistemare
     """
     Forecasting con Prophet
 
@@ -390,7 +408,7 @@ def prophet_forecasting(timeseries, h):
     return forecast[len(timeseries):len(timeseries)+h]
     
     
-def accuracy_sarimax(timeseries, m, end_train):
+def accuracy_sarimax(timeseries, m, train_length):
     """
     Verifica visuale dell'accuratezza di un modello SARIMAX
 
@@ -400,8 +418,8 @@ def accuracy_sarimax(timeseries, m, end_train):
         la serie temporale
     m : int
         numero di osservazioni in un anno
-    end_train : str
-        l'ultimo anno da considerare nel set di train
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
 
     Returns
     -------
@@ -409,17 +427,18 @@ def accuracy_sarimax(timeseries, m, end_train):
         MSE
 
     """
-    # spezzo la serie temporale in due set (train e test)
-    train = timeseries[:end_train]
-    test = timeseries[str(int(end_train)+1):]
-    
+    # spezzo la serie temporale
+    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
+
     # predico valori per la lunghezza del set di test
-    forecasts = sarimax_forecasting(train, m, len(test))
+    forecasts = sarimax_forecasting(train, m, len(timeseries)-len(train))
     pred_ci = forecasts.conf_int()
     
     # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    forecasts.predicted_mean.plot(ax=ax, label='Forecasted test', alpha=.7)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(timeseries.name)
+    ax = timeseries.plot(label='Observed', color='black')
+    forecasts.predicted_mean.plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
     ax.fill_between(pred_ci.index,
                     pred_ci.iloc[:, 0],
                     pred_ci.iloc[:, 1], color='k', alpha=.2)
@@ -431,7 +450,7 @@ def accuracy_sarimax(timeseries, m, end_train):
     return round(mse, 2)
 
 
-def accuracy_arima(timeseries, end_train):
+def accuracy_arima(timeseries, train_length):
     """
     Verifica visuale dell'accuratezza di un modello ARIMA
 
@@ -439,8 +458,8 @@ def accuracy_arima(timeseries, end_train):
     ----------
     timeseries : Series
         la serie temporale
-    end_train : str
-        l'ultimo anno da considerare nel set di train
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
 
     Returns
     -------
@@ -448,16 +467,17 @@ def accuracy_arima(timeseries, end_train):
         MSE
 
     """
-    # spezzo la serie temporale in due set (train e test)
-    train = timeseries[:end_train]
-    test = timeseries[str(int(end_train)+1):]
-    
+    # spezzo la serie temporale
+    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
+
     # predico valori per la lunghezza del set di test
-    arima_forecasts = arima_forecasting(train, len(test))
+    arima_forecasts = arima_forecasting(train, len(timeseries)-len(train))
     
     # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    arima_forecasts[0].plot(ax=ax, label='Forecasted test', alpha=.7)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(timeseries.name)
+    ax = timeseries.plot(label='Observed', color='black')
+    arima_forecasts[0].plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
     ax.fill_between(arima_forecasts.index,
                     arima_forecasts[1],
                     arima_forecasts[2], color='k', alpha=.2)
@@ -487,8 +507,10 @@ def accuracy_tbats(timeseries, forecasts):
 
     """
     # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    forecasts.plot(ax=ax, label='Forecasted test', alpha=.7)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(timeseries.name)
+    ax = timeseries.plot(label='Observed', color='black')
+    forecasts.plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
     #ax.fill_between(forecasts.index, forecasts[1], forecasts[2], color='k', alpha=.2)
     plt.legend()
     plt.show()
@@ -498,7 +520,7 @@ def accuracy_tbats(timeseries, forecasts):
     return round(mse, 2)
     
 
-def accuracy_prophet(timeseries, end_train):
+def accuracy_prophet(timeseries, end_train): # TODO: da sistemare
     """
     Verifica visuale dell'accuratezza di un modello ARIMA
 
@@ -569,31 +591,30 @@ if __name__ == '__main__':
     sarimax_forecasting(ts, 7, 50) # ignoro la stagionalità annuale
     
     # controllo l'accuratezza delle previsioni di SARIMAX confrontandole con la serie stessa:
-    mse_sarimax = accuracy_sarimax(ts, 7, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+    mse_sarimax = accuracy_sarimax(ts, 7, 0.8) # uso i dati fino alla fine del 2016 per prevedere i successivi
     
     # %% ARIMA
     # forecasting con ARIMA (basato sugli orders ottenuti minimizzando AIC):
     arima_forecasting(ts, 50)
     
     # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
-    mse_arima = accuracy_arima(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
+    mse_arima = accuracy_arima(ts, 0.8) # uso i dati fino alla fine del 2016 per prevedere i successivi
     
     # %% TBATS
-    ts_to_train = ts[:'2016']
-    ts_to_test = ts['2017':]
+    ts_to_train = ts[pd.date_range(start=data.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D')]
     
     # forecasting con TBATS:
-    ts_forecast = tbats_forecasting(ts_to_train, len(ts_to_test), [7, 365.25])
+    ts_forecast = tbats_forecasting(ts_to_train, len(ts)-len(ts_to_train), [7, 365.25])
     
     # calcolo la serie temporale dei valori predetti:
-    future_dates = pd.date_range(start=ts.index[len(ts_to_train)], periods=len(ts_to_test), freq='D')
+    future_dates = pd.date_range(start=ts.index[len(ts_to_train)], periods=len(ts)-len(ts_to_train), freq='D')
     future_series = pd.Series(data=ts_forecast, index=future_dates)
     
     # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
     mse_tbats = accuracy_tbats(ts, future_series)
     
     # %% SARIMAX (with Fourier terms)
-    mse_fourier = fourier_forecasting(ts, 7, '2016')
+    mse_fourier = fourier_forecasting(ts, 7, 0.8)
     
     # %% Prophet
     # forecasting con Prophet:
