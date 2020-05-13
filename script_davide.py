@@ -3,6 +3,7 @@
 Analisi dei dati di un negozio di abbigliamento
 """
 import datetime as dt
+from fbprophet import Prophet
 import itertools
 import matplotlib.pyplot as plt
 import numpy as np
@@ -358,6 +359,37 @@ def fourier_forecasting(timeseries, m, end_train):
     return round(mse, 2)
 
 
+def prophet_forecasting(timeseries, h):
+    """
+    Forecasting con Prophet
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    h : int
+        l'orizzonte
+
+    Returns
+    -------
+    DataFrames
+        la serie temporale basata sui risultati del forecast
+
+    """
+    df = pd.DataFrame(data=timeseries.to_numpy(), index=timeseries.index, columns=['y'])
+    df.insert(0, 'ds', timeseries.index)
+    
+    m = Prophet()
+    m.fit(df);
+    future = m.make_future_dataframe(periods=h)
+    forecast = m.predict(future)
+    
+    m.plot(forecast);
+    m.plot_components(forecast);
+    
+    return forecast[len(timeseries):len(timeseries)+h]
+    
+    
 def accuracy_sarimax(timeseries, m, end_train):
     """
     Verifica visuale dell'accuratezza di un modello SARIMAX
@@ -466,6 +498,52 @@ def accuracy_tbats(timeseries, forecasts):
     return round(mse, 2)
     
 
+def accuracy_prophet(timeseries, end_train):
+    """
+    Verifica visuale dell'accuratezza di un modello ARIMA
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    end_train : str
+        l'ultimo anno da considerare nel set di train
+
+    Returns
+    -------
+    float
+        MSE
+
+    """
+    # spezzo la serie temporale in due set (train e test)
+    train = timeseries[:end_train]
+    test = timeseries[str(int(end_train)+1):]
+    
+    # predico valori per la lunghezza del set di test
+    forecasts = prophet_forecasting(train, len(test))
+    
+    # calcolo la serie temporale dei valori predetti
+    forecasts_dates = pd.date_range(start=ts.index[len(train)], periods=len(test), freq='D')
+    yhat = pd.Series(data=forecasts['yhat'].to_numpy(), index=forecasts_dates)
+    yhat_lower = pd.Series(data=forecasts['yhat_lower'].to_numpy(), index=forecasts_dates)
+    yhat_upper = pd.Series(data=forecasts['yhat_upper'].to_numpy(), index=forecasts_dates)
+    forecasts_series = pd.concat([yhat, yhat_lower, yhat_upper], axis=1)
+    
+    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    plt.figure()
+    ax = timeseries.plot(label='Observed', figsize=(40,20))
+    forecasts_series[0].plot(ax=ax, label='Forecasted test', alpha=.7)
+    ax.fill_between(forecasts_series[0].index,
+                    forecasts_series[1],
+                    forecasts_series[2], color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo del MSE
+    mse = ((forecasts_series[0] - timeseries) ** 2).mean()
+    return round(mse, 2)
+
+
 if __name__ == '__main__':
     data = load_data('Dati_Albignasego/Whole period.csv')
     # colonne: MAGLIE, CAMICIE, GONNE, PANTALONI, VESTITI, GIACCHE
@@ -516,6 +594,13 @@ if __name__ == '__main__':
     
     # %% SARIMAX (with Fourier terms)
     mse_fourier = fourier_forecasting(ts, 7, '2016')
+    
+    # %% Prophet
+    # forecasting con Prophet:
+    prophet_forecasting(ts, 50)
+    
+    # controllo l'accuratezza delle previsioni di Prophet confrontandole con la serie stessa:
+    mse_prophet = accuracy_prophet(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
     
     # %% Comparazione dei modelli
     print("SARIMAX:", mse_sarimax)
