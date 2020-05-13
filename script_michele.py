@@ -6,11 +6,26 @@ import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
 import datetime 
-import statsmodels.api as sm
+#import statsmodels.api as sm
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf, pacf, adfuller
 
+SMALL_SIZE = 28 
+MEDIUM_SIZE = 30
+BIGGER_SIZE = 32
+COLOR_ORIG = 'black'
+COLOR_MODEL = 'green'
+COLOR_FOREC = 'red'
+COLOR_ACF = 'blue'
+ 
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize 
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 def timeplot(ts, label, linestyle='-'):
     '''
@@ -30,12 +45,13 @@ def timeplot(ts, label, linestyle='-'):
     None.
     '''
     plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(label)
     plt.plot(ts)
-    plt.plot(ts,  label=label, linestyle=linestyle)
+    plt.plot(ts, label=label, linestyle=linestyle, color=COLOR_ORIG)
     plt.legend(loc='best');
     plt.show()
 
-def plotAcf(ts, isPacf=False, both=False, lags=40):
+def plotAcf(ts, isPacf=False, both=False, lags=40, title=""):
     '''
     Funzione che realizza un plot della acf/pacf (o entrambe) 
     data una serie temporale
@@ -56,7 +72,8 @@ def plotAcf(ts, isPacf=False, both=False, lags=40):
     auto_cor = acf(ts, nlags=lags, fft=True)
     part_auto_cor = pacf(ts, nlags=lags)
     
-    plt.figure(figsize=(12,6))    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(title)
     if not both:
         if not isPacf:
             plt.plot(auto_cor)
@@ -217,7 +234,7 @@ if __name__ == "__main__":
     dataframe = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
     # Analizziamo i dati graficamente
-    for column in dataframe:
+    for column in {'MAGLIE'}:#dataframe:
         # Recuperiamo una serie temporale
         serie_totale = dataframe[column]
         # tiriamo fuori il training set dell'80% sui dati
@@ -230,7 +247,7 @@ if __name__ == "__main__":
         timeplot(ts=serie, label=column)
         
         # Cerchiamo di capire se la serie è stagionale e/o presenta trend dalla funzione acf
-        plotAcf(serie, both=True) #, lags=int(len(serie)/3)
+        plotAcf(serie, both=True, title="Acf " + column) #, lags=int(len(serie)/3)
         
         # Forza delle componenti stagionalità e trend
         strength_s, strength_t = strength_seasonal_trend(serie, season)
@@ -251,14 +268,18 @@ if __name__ == "__main__":
         residual = decomposition.resid
         
         plt.figure(figsize=(40, 20), dpi=80)
+        plt.title("Decomposizione serie")
         plt.subplot(411)
-        plt.plot(serie, label='Original')
+        plt.plot(serie, label='Original', color=COLOR_ORIG)
+        plt.legend(loc='best');
         plt.subplot(412)
-        plt.plot(trend, label='Trend')
+        plt.plot(trend, label='Trend', color=COLOR_ACF)
+        plt.legend(loc='best');
         plt.subplot(413)
-        plt.plot(seasonal, label='Seasonal')
+        plt.plot(seasonal, label='Seasonal', color=COLOR_ACF)
+        plt.legend(loc='best');
         plt.subplot(414)
-        plt.plot(residual, label='Residuals')
+        plt.plot(residual, label='Residuals', color=COLOR_ACF)
         plt.legend(loc='best');
         plt.show()
         
@@ -269,7 +290,7 @@ if __name__ == "__main__":
         # Realizzazione ARIMA        
         serie_diff = serie_destagionata.diff()
         serie_diff.dropna(inplace=True)
-        plotAcf(serie_diff, both=True, lags=100)
+        plotAcf(serie_diff, both=True, lags=100, title="Acf e Pacf della serie " + column + " differenziata")
         
         # Definiamo dunque il modello ARIMA    
         p,q = p_QForArima(serie_diff, len(serie_diff))        
@@ -279,8 +300,9 @@ if __name__ == "__main__":
         
         # Plottamo grafico normale e arima_model
         plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(serie_destagionata, color='black', label=column)
-        plt.plot(arima_model, color='red', label='Modello ARIMA(' + str(p) + ',' + str(int(not isStationary)) + ',' + str(q) +')')
+        plt.title("Serie destagionata:" + column + ", ARIMA(" + str(p) + ',' + str(int(not isStationary)) + ',' + str(q) +')')
+        plt.plot(serie_destagionata, label=column, color=COLOR_ORIG)
+        plt.plot(arima_model, label='Modello ARIMA(' + str(p) + ',' + str(int(not isStationary)) + ',' + str(q) +')', color=COLOR_MODEL)
         plt.legend(loc='best');
         plt.show()        
         
@@ -290,15 +312,16 @@ if __name__ == "__main__":
         # %%
         # Mettiamo in confronto i due modelli
         plt.figure(figsize=(40, 20), dpi=80)
+        plt.plot("CONFRONTO FRA: " + 'Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')' + " e " + 'Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')')
         plt.subplot(211)
-        plt.plot(serie_destagionata, label=column, color='black')
-        plt.plot(arima_model,color='red', label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')')
+        plt.plot(serie_destagionata, label=column, color=COLOR_ORIG)
+        plt.plot(arima_model, label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')', color=COLOR_MODEL)
         plt.legend(loc='best');
         plt.subplot(212)
-        plt.plot(serie_destagionata, label=column, color='black')
+        plt.plot(serie_destagionata, label=column, color=COLOR_ORIG)
         
         best_arima_model = pd.Series(best_result_model.fittedvalues, copy=True)
-        plt.plot(best_arima_model, color='green', label='Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')')
+        plt.plot(best_arima_model, label='Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')', color=COLOR_MODEL)
         plt.legend(loc='best');
         plt.show()
         
@@ -307,14 +330,19 @@ if __name__ == "__main__":
         best_arima_model_con_stag = best_arima_model + seasonal
         best_arima_model_con_stag.dropna(inplace=True)
         
+        '''
         plt.figure(figsize=(40, 20), dpi=80)
         plt.plot(serie[(best_arima_model_con_stag).index], label=column, color='black')
         plt.plot(best_arima_model_con_stag,color='red', label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')')
         plt.legend(loc='best');
-        plt.show()        
+        plt.show()
+        '''
+        
+        # DEVO RICORDARMI UNO SFASAMENTO A CAUSA DEL FATTO CHE USO INTERI COME INDICI        
+        sfasamento = int((len(seasonal) - len(best_arima_model_con_stag))/2)   
         
         # FORECASTING
-        h = 50  # orizzonte        
+        h = len(serie_totale) - len(seasonal)  # orizzonte        
         last_observation = best_arima_model_con_stag.index[len(best_arima_model_con_stag) - 1]        
         
         ts_seasonal_forecast = pd.Series(seasonal[best_arima_model_con_stag.index], copy=True)
@@ -333,10 +361,10 @@ if __name__ == "__main__":
             
             alpha = 0.9 # sommatoria in media exp
             ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
-            tmp[i] += seasonal[ind]
+            tmp[i] += seasonal[sfasamento + ind]
             exp = 1
             while (ind >= 0):
-                tmp[i] += seasonal[ind] * ((1 - alpha) ** exp)
+                tmp[i] += seasonal[sfasamento + ind] * ((1 - alpha) ** exp)
                 exp += 1
                 ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
             
@@ -347,23 +375,54 @@ if __name__ == "__main__":
         ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=last_observation, periods=h , freq='D'))
         ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)#seasonal[pd.date_range
         
-        # Previsioni sulla parte de-stagionata
-        previsione, _ ,intervallo = best_result_model.forecast(steps=h)
+        # ADESSO DEVO AGGIUNGERE UNA PARTE DI PREVISIONE SU SEASONAL_FORECAST
+        # CHE PARTE DAL SEASONAL E ARRIVA FINO ALLA PREVISIONE TOTALE SU SERIE_TOTALE
         
-        ts_NOseasonal_forecast = pd.Series(previsione, index=pd.date_range(start=last_observation, periods=h , freq='D'))
+        tmp = [0.0] * sfasamento                         # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+        start = len(ts_seasonal_forecast)       # rappresenta l'osservazione futura da prevedere
+        
+        for i in range(0, sfasamento): # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+            ind = start
+            #tmp[i] = seasonal[i - season]  # seasonal naif
+            
+            alpha = 0.9 # sommatoria in media exp
+            ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            tmp[i] += ts_seasonal_forecast[ind]
+            exp = 1
+            while (ind >= 0):
+                tmp[i] += ts_seasonal_forecast[ind] * ((1 - alpha) ** exp)
+                exp += 1
+                ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            
+            start += 1 # questo arriverà fino a t+h
+            tmp[i] = tmp[i]
+            
+        
+        ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=ts_seasonal_forecast.index[len(ts_seasonal_forecast) - 1], periods=sfasamento, freq='D'))
+        ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)
+        
+        
+        # H con sfasamento
+        new_h = h + sfasamento
+        
+        # Previsioni sulla parte de-stagionata
+        previsione, _ ,intervallo = best_result_model.forecast(steps=new_h)
+        
+        ts_NOseasonal_forecast = pd.Series(previsione, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
         
         plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(best_arima_model_con_stag, color="green", label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
-        plt.plot(ts_seasonal_forecast + ts_NOseasonal_forecast, linestyle='-',color='red', label='Previsioni', alpha=.75)
+        plt.title("PREVISIONI CON " + 'Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
+        plt.plot(best_arima_model_con_stag, color=COLOR_MODEL, label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
+        plt.plot(ts_seasonal_forecast + ts_NOseasonal_forecast,color=COLOR_FOREC, label='Previsioni')
 
         plt.plot(serie_totale[pd.date_range(
             start=last_observation, 
-            periods=h , freq='D')], linestyle='-', 
-            color='black', label='Osservazioni reali', markersize=7)
+            periods=new_h, freq='D')], linestyle='-', 
+            color=COLOR_ORIG, label='Osservazioni reali')
         
-        intervallo_sup = [0.0] * h
-        intervallo_inf = [0.0] * h
-        seasonal_interval_sum = [0.0] * h
+        intervallo_sup = [0.0] * new_h
+        intervallo_inf = [0.0] * new_h
+        seasonal_interval_sum = [0.0] * new_h
         
         # Normalizzo gli array
         ind = 0
@@ -377,19 +436,19 @@ if __name__ == "__main__":
 
         # Recupero i valori di ts_seasonal_forecast
         ind = 0
-        for i in range(len(ts_seasonal_forecast) - h, len(ts_seasonal_forecast)):
+        for i in range(len(ts_seasonal_forecast) - new_h, len(ts_seasonal_forecast)):
             seasonal_interval_sum[ind] = float(ts_seasonal_forecast[i])
             ind+=1
 
         # SOMMATORIA
-        for i in range(0, h):
+        for i in range(0, new_h):
             intervallo_sup[i] += seasonal_interval_sum[i]
-        for i in range(0, h):
+        for i in range(0, new_h):
             intervallo_inf[i] += seasonal_interval_sum[i]
         
-        plt.fill_between(pd.date_range(start=last_observation, periods=h , freq='D'), 
+        plt.fill_between(pd.date_range(start=last_observation, periods=new_h , freq='D'), 
                          intervallo_sup, 
                          intervallo_inf, 
-                         color='black', alpha=.25)
+                         color=COLOR_ORIG, alpha=.25)
         plt.legend(loc='best');
         plt.show()
