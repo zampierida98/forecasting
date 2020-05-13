@@ -290,6 +290,22 @@ def p_q_for_ARIMA(timeseries):
             break
     
     return (p,q)
+def forza_season(timeseries, season=12):
+    """
+    Calcola il grado di forza di una presunta stagione nella serie
+    -----------------
+    Parametri
+    -----------------
+    timeseries -> la serie temporale 
+    season -> la presunta lunghezza della stagione di cui misurare il "grado di forza"
+    """
+    decomposition = seasonal_decompose(timeseries, period=season)
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+    
+    forza_stagionale = max(0, 1 - residual.var()/(seasonal + residual).var())
+    
+    return forza_stagionale
     
     
     

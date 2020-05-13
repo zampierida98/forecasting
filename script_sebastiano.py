@@ -4,7 +4,7 @@ Created on Mon May  4 13:32:57 2020
 
 @author: seba3
 """
-
+import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ import mytools as mt
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.arima_model import ARIMA
 
-season = 365 #giorni
+season = 182 #giorni
 
 # caricamento insieme dati e verifica tipo delle colonne
 
@@ -38,42 +38,43 @@ ts_giacche = data['GIACCHE']
 
 #togliere i valori nulli per applicare log!
 ts_totale = ts_maglie + ts_camicie + ts_gonne + ts_pantaloni + ts_vestiti + ts_giacche
-"""
+
 for i in range(1, len(ts_totale)):
     ts_totale[i] = ts_totale[i]+1
-"""    
+    
 #ts_totale = ts_totale.drop(labels=[pd.Timestamp('2016-02-29')])
 #print(ts_totale['2016-02'])
 
 train = ts_totale[pd.date_range(start=ts_totale.index[0], end=ts_totale.index[int(len(ts_totale) * 0.8)], freq='D')]
-
+valid = ts_totale[pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], end = ts_totale.index[int(len(ts_totale))-1], freq='D')]
 #Mi occupo del totale vendite
 
 #Elimino il 29 febbraio 2016 per avere sempre periodi di 365 giorni.
-train.drop(labels=[pd.Timestamp('2016-02-29')])
+train = train.drop(labels=[pd.Timestamp('2016-02-29')])
 ts = train #solo per comodità nella manipolazione dei dati...
 
 plt.figure(figsize=(40, 20), dpi=80)
-plt.title(label='Serie temporale iniziale')
+plt.title('Training set + Validation set')
 plt.ylabel('#Capi venduti')
 plt.xlabel('Data')
-plt.plot(ts)
+plt.plot(ts, label="training set")
+plt.plot(valid, label="validation set")
+plt.legend(loc='best')
+plt.plot()
 
 #Test per constatare la stazionarietà di una serie
 mt.test_stationarity(ts, season, True)
 plt.title(label = "Serie iniziale (totale capi venduti)")
-
 #Grafici di autocorrelazione e autocorrelazione parziale
 #mt.ac_pac_function(ts)
 plt.title(label = "Serie iniziale (totale capi venduti)")
 
 #ts è la serie con il tale di capi venduti + 1 per giorno da cui è stato tolto il 29 febbraio 2016
-ts_log = np.sqrt(ts)
+#ts_log = np.log(ts)
+ts_log = ts
 #mt.test_stationarity(ts_log, season, True)
-
 #Differenziazione e prove per controllare il funzionamento di cumulative sums...
-
-ts_log_diff1 = ts_log.diff()
+ts_log_diff1 = ts_log.diff(periods=365)
 ts_log_diff1.dropna(inplace = True)
 mt.test_stationarity(ts_log_diff1, season, True)
 mt.kpss_test(ts_log_diff1)
@@ -111,9 +112,8 @@ print(restored2.head())
 """
 #%%
 mt.ac_pac_function(ts_log_diff1)
-#p, q = mt.p_q_for_ARIMA(ts_log_diff1)
-#print(p, q)
-p, q = 2, 2
+p, q = mt.p_q_for_ARIMA(ts_log_diff1)
+print(p, q)
 model = ARIMA(ts_log, order=(p, 1, q))
 results_ARIMA = model.fit(disp=-1)  
 #plt.plot(ts_diff2_log, color='blue', label='2-differenced logged serie')
@@ -127,52 +127,94 @@ plt.legend(loc='best');
 
 #%%
 
-predizione_ARIMA_diff = pd.Series(results_ARIMA.fittedvalues, copy = True)
+predizione_ARIMA_diff = pd.Series(data = results_ARIMA.fittedvalues, copy = True)
 
 #riporto a originale
 predizione_ARIMA_diff_cumsum = predizione_ARIMA_diff.cumsum()
-#print(predizione_ARIMA_diff_cumsum.head())
-#predizione_ARIMA_log = pd.Series(ts_log, index = ts_log.index)
-predizione_ARIMA_log = pd.Series(predizione_ARIMA_diff_cumsum)
-#predizione_ARIMA_log = predizione_ARIMA_log.add(predizione_ARIMA_diff_cumsum, fill_value=0)
+predizione_ARIMA_log = pd.Series(ts_log.iloc[0], index = ts_log.index)
+predizione_ARIMA_log = predizione_ARIMA_log.add(predizione_ARIMA_diff_cumsum, fill_value = 0)
 
 #%%
-predizione_ARIMA = np.square(predizione_ARIMA_log)
+#predizione_ARIMA = np.exp(predizione_ARIMA_log)
 """
 for i in range(1, len(predizione_ARIMA_log)):
     predizione_ARIMA_log[i] = predizione_ARIMA_log[i]-1
 """
 plt.figure(figsize=(40, 20), dpi=80)
 plt.plot(ts, color = 'blue', label = 'serie iniziale')
-plt.plot(predizione_ARIMA, label ="arima trasformato all' indietro", color = 'red')
-plt.title('RMSE: %.4f'% np.sqrt(sum((predizione_ARIMA-ts)**2)/len(ts)))
+plt.plot(predizione_ARIMA_log, label ="arima trasformato all' indietro", color = 'red')
+plt.title('RMSE: %.4f'% np.sqrt(sum((predizione_ARIMA_log-ts)**2)/len(ts)))
 plt.legend(loc='best');
 
 #%%
+ts_log_back = mt.cumulative_sums(ts_log_diff1, 1, ts_log)
+#ts_back = np.exp(ts_log_back)
 
+#%%
+"""
 #divido in 'train' e 'validation' sets i miei dati
 train = ts[pd.date_range(start = ts.index[0], end = ts.index[int(0.8*(len(ts)))])] #80% per training
 valid = ts[pd.date_range(start = ts.index[int(0.8*(len(ts)))], end = ts.index[int(len(ts))-1])] #20% per validation
-
+print(valid.head(), len(valid))
+print(train.head(), len(train))
+#%%
 #plotting the data
 plt.figure(figsize=(40, 20), dpi=80)
 plt.plot(train)
 plt.plot(valid)
 
 model = ARIMA(train, order =(2, 1, 2))
-model = model.fit()
-print(model.summary())
+model = model.fit(disp = False)
+predictions = model.forecast(steps = int(len(valid)))
+#%%
+print(predictions)
+predictions = pd.Series(predictions, index=pd.date_range(start=valid.iloc[0], periods=int(len(valid)), freq='D'))
 
-forecast = model.predict(int(len(train)), int(len(train)))
-forecast = pd.DataFrame(forecast,index = valid.index,columns=['Prediction'])
-
-forecast.dropna(inplace=True)
+predictions.dropna(inplace=True)
 plt.figure()
-plt.plot(forecast)
-print(forecast.head())
+plt.plot(predictions)
+print(predictions.head())
 #%%
 #plot the predictions for validation set
 plt.figure(figsize=(40, 20), dpi=80)
 plt.plot(train, label='Train', color = 'blue')
 plt.plot(valid, label='Valid', color = 'yellow')
 plt.plot(forecast, label='Prediction', color = 'green')
+"""
+#%%
+p, q = 4, 3
+
+my_ts = ts_log.diff(periods=365)
+#my_ts = ts_log.diff()
+my_ts.dropna(inplace=True)
+my_stagionalita = ts_log.rolling(window=15).mean()
+
+model = ARIMA(my_ts, order=(p, 0, q))
+results_ARIMA = model.fit(disp=0)  
+#plt.plot(ts_diff2_log, color='blue', label='2-differenced logged serie')
+
+my_arima = pd.Series(results_ARIMA.fittedvalues, copy=True)
+original_scale = my_arima + my_stagionalita
+for i in range(1, len(original_scale)):
+    if original_scale[i] < 0:
+        original_scale[i] = 0
+        
+plt.figure(figsize=(40, 20), dpi=80)
+plt.plot(ts_log, color = 'blue', label = "Training set")
+plt.plot(original_scale, color='orange', label='ARIMA')
+plt.title("Arima (%d, 1, %d)"% (p, q))
+plt.legend(loc='best');
+
+#%%
+
+predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
+predictions = pd.Series(predictions, index=pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], periods=int(len(valid)), freq='D'))
+predictions.dropna(inplace=True)
+plt.figure(figsize=(40, 20), dpi=80)
+plt.plot(train, color='b', label='training set')
+plt.plot(valid, color='c', label='validation set')
+plt.plot(original_scale, color = 'orange', label = 'ARIMA')
+plt.plot(predictions+valid.rolling(window=15).mean(), color="purple", label='forecast')
+plt.legend(loc='best')
+
+print(predictions.head())
