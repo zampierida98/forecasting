@@ -56,7 +56,7 @@ def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
             plt.subplot(position)
         else:
             plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(timeseries, color='blue', label='Original')
+        plt.plot(timeseries, label='Original')
         plt.plot(rolmean, color='red', label='Rolling Mean')
         plt.plot(rolstd, color='black', label='Rolling Std')
         plt.legend(loc='best')
@@ -101,7 +101,7 @@ def make_seasonal_stationary(timeseries, temporalwindow, boolprint):
     
     if(boolprint):
         plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(timeseries, color='blue', label='ts logaritmica')
+        plt.plot(timeseries, label='ts logaritmica')
         plt.plot(timeseries, color='red', label='moving average della ts logaritmica')
         plt.plot(timeseries_moving_avg_diff, color='green', label='ts logaritmica - moving average')
         plt.show(block=False)
@@ -128,7 +128,7 @@ def make_exponential_stationary(timeseries, decayfactor, boolprint):
     expwighted_avg = timeseries.ewm(decayfactor).mean()
     ts_log_ewma_diff = timeseries - expwighted_avg
     if(boolprint):
-        plt.plot(timeseries, color='blue', label='ts_logaritmica')
+        plt.plot(timeseries, label='ts_logaritmica')
         plt.plot(expwighted_avg, color='red', label='exponentially weighted moving average')
         plt.plot(ts_log_ewma_diff, color='green', label='ts logaritmica - ewma')
         plt.show(block=False)

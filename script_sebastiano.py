@@ -13,6 +13,23 @@ import mytools as mt
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.arima_model import ARIMA
 
+SMALL_SIZE = 28 
+MEDIUM_SIZE = 30 
+BIGGER_SIZE = 32 
+ 
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize 
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+TRAINING_SET_C = 'cornflowerblue'
+VALIDATION_SET_C = 'gold'
+FORECASTS_C = 'black'
+MODEL_RESULTS_C = 'red'
+
 season = 182 #giorni
 
 # caricamento insieme dati e verifica tipo delle colonne
@@ -141,46 +158,12 @@ for i in range(1, len(predizione_ARIMA_log)):
     predizione_ARIMA_log[i] = predizione_ARIMA_log[i]-1
 """
 plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts, color = 'blue', label = 'serie iniziale')
+plt.plot(ts, label = 'serie iniziale')
 plt.plot(predizione_ARIMA_log, label ="arima trasformato all' indietro", color = 'red')
 plt.title('RMSE: %.4f'% np.sqrt(sum((predizione_ARIMA_log-ts)**2)/len(ts)))
 plt.legend(loc='best');
 
-#%%
-ts_log_back = mt.cumulative_sums(ts_log_diff1, 1, ts_log)
-#ts_back = np.exp(ts_log_back)
 
-#%%
-"""
-#divido in 'train' e 'validation' sets i miei dati
-train = ts[pd.date_range(start = ts.index[0], end = ts.index[int(0.8*(len(ts)))])] #80% per training
-valid = ts[pd.date_range(start = ts.index[int(0.8*(len(ts)))], end = ts.index[int(len(ts))-1])] #20% per validation
-print(valid.head(), len(valid))
-print(train.head(), len(train))
-#%%
-#plotting the data
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(train)
-plt.plot(valid)
-
-model = ARIMA(train, order =(2, 1, 2))
-model = model.fit(disp = False)
-predictions = model.forecast(steps = int(len(valid)))
-#%%
-print(predictions)
-predictions = pd.Series(predictions, index=pd.date_range(start=valid.iloc[0], periods=int(len(valid)), freq='D'))
-
-predictions.dropna(inplace=True)
-plt.figure()
-plt.plot(predictions)
-print(predictions.head())
-#%%
-#plot the predictions for validation set
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(train, label='Train', color = 'blue')
-plt.plot(valid, label='Valid', color = 'yellow')
-plt.plot(forecast, label='Prediction', color = 'green')
-"""
 #%%
 p, q = 4, 3
 
@@ -200,7 +183,7 @@ for i in range(1, len(original_scale)):
         original_scale[i] = 0
         
 plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts_log, color = 'blue', label = "Training set")
+plt.plot(ts_log, label = "Training set")
 plt.plot(original_scale, color='orange', label='ARIMA')
 plt.title("Arima (%d, 1, %d)"% (p, q))
 plt.legend(loc='best');
@@ -211,10 +194,14 @@ predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
 predictions = pd.Series(predictions, index=pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], periods=int(len(valid)), freq='D'))
 predictions.dropna(inplace=True)
 plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(train, color='b', label='training set')
+plt.plot(train, label='training set')
 plt.plot(valid, color='c', label='validation set')
-plt.plot(original_scale, color = 'orange', label = 'ARIMA')
-plt.plot(predictions+valid.rolling(window=15).mean(), color="purple", label='forecast')
+plt.plot(original_scale, color = 'orange', label = 'risultati di ARIMA')
+forecast = predictions+ts_totale.rolling(window=15).mean()
+forecast.dropna(inplace = True)
+plt.plot(forecast, color="purple", label='previsione con ARIMA')
+plt.title('Previsioni con ARIMA(4,1,3)')
+plt.xlabel('Data')
+plt.ylabel('#Capi venduti')
 plt.legend(loc='best')
-
 print(predictions.head())
