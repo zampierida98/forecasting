@@ -121,6 +121,262 @@ def acf_pacf(timeseries):
     plt.show()
 
 
+def iterative_order_selection(timeseries, min_order=0, max_order=5):
+    """
+    Selezione iterativa degli ordini (p,d,q) per ARIMA
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    min_order : int
+        l'ordine minimo da considerare (default 0)
+    max_order : int
+        l'ordine massimo da considerare (default 5)
+
+    Returns
+    -------
+    tuple
+        (p,d,q)
+
+    """
+    # calcolo tutte le possibili combinazioni di (p,d,q)
+    p = d = q = range(min_order, max_order+1)
+    pdq = list(itertools.product(p, d, q))
+    
+    # provo tutte le combinazioni
+    orders = []
+    aics = []
+    warnings.filterwarnings("ignore")
+    for param in pdq:
+        try:
+            mod = ARIMA(timeseries, order=param)
+            results = mod.fit()
+            print('ARIMA{} - AIC:{}'.format(param, results.aic))
+            orders.append(param)
+            aics.append(results.aic)
+        except:
+            continue
+    
+    # ritorno la combinazione che realizza il modello con AIC più basso
+    index_min_aic = np.argmin(aics)
+    return orders[index_min_aic]
+
+
+def arima_model(timeseries, seasonal=pd.Series()):
+    """
+    Miglior modello ARIMA (basato su una selezione iterativa degli ordini)
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    seasonal: Series
+        l'eventuale componente stagionale
+    
+    Returns
+    -------
+    tuple
+        il modello ARIMA trovato completo di serie temporale e ordini
+
+    """
+    # realizzo il modello con gli ordini ottenuti dalla ricerca iterativa
+    o = iterative_order_selection(timeseries)
+    mod = ARIMA(timeseries, order=o)
+    results = mod.fit()
+    print(results.summary())
+    arima_model = pd.Series(results.fittedvalues, copy=True)
+    
+    # grafico dei valori osservati e del modello ARIMA
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('ARIMA{} per {}'.format(o, timeseries.name))
+    plt.plot(timeseries, label='Seasonally adjusted data', color='black')
+    plt.plot(arima_model, label='ARIMA{}'.format(o), color='green')
+    plt.legend(loc='best');
+    plt.show()
+    
+    if(not seasonal.empty):
+        # unisco al modello trovato la componente stagionale
+        arima_model = arima_model + seasonal
+        arima_model.dropna(inplace=True)
+        observed = timeseries + seasonal
+        observed.dropna(inplace=True)
+        
+        # grafico dei valori osservati e del modello ARIMA (con stagionalità)
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title('ARIMA{} per {}'.format(o, timeseries.name))
+        plt.plot(observed, label='Observed', color='black')
+        plt.plot(arima_model, label='ARIMA{}'.format(o), color='green')
+        plt.legend(loc='best');
+        plt.show()
+
+    return results, arima_model, o
+
+
+def arima_forecasting(timeseries, seasonal, m, mod_arima):
+    """
+    Forecasting con ARIMA
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    seasonal : Series
+        la componente stagionale
+    m : int
+        numero di osservazioni in un anno
+    mod_arima : tuple
+        il modello ARIMA completo di serie temporale e ordini
+    
+    Returns
+    -------
+    Series
+        la serie dei valori predetti
+        
+    """
+    results = mod_arima[0]
+    model = mod_arima[1]
+    orders = mod_arima[2]
+    h = len(timeseries) - len(seasonal)
+    last_observation = model.index[len(model) - 1]        
+    
+    # previsioni sulla componente stagionale
+    ts_seasonal_forecast = pd.Series(seasonal[model.index], copy=True)
+    sfasamento = int((len(seasonal) - len(model))/2)
+    
+    tmp = [0.0] * h                     # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+    start = len(ts_seasonal_forecast)   # rappresenta l'osservazione futura da prevedere
+    for i in range(0, h):               # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+        ind = start
+        alpha = 0.9                     # sommatoria in media exp
+        ind -= m                        # prima il decremento perchè non abbiamo il valore di t+1 
+        tmp[i] += seasonal[sfasamento + ind]
+        exp = 1
+        while ind >= 0:
+            tmp[i] += seasonal[sfasamento + ind] * ((1 - alpha) ** exp)
+            exp += 1
+            ind -= m                     # prima il decremento perchè non abbiamo il valore di t+1 
+        
+        start += 1                      # questo arriverà fino a t+h
+        tmp[i] = tmp[i]
+    
+    ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=last_observation, periods=h , freq='D'))
+    ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)
+    
+    tmp = [0.0] * sfasamento            # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+    start = len(ts_seasonal_forecast)   # rappresenta l'osservazione futura da prevedere
+    for i in range(0, sfasamento):      # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+        ind = start
+        alpha = 0.9                     # sommatoria in media exp
+        ind -= m                        # prima il decremento perchè non abbiamo il valore di t+1 
+        tmp[i] += ts_seasonal_forecast[ind]
+        exp = 1
+        while ind >= 0:
+            tmp[i] += ts_seasonal_forecast[ind] * ((1 - alpha) ** exp)
+            exp += 1
+            ind -= m                    # prima il decremento perchè non abbiamo il valore di t+1 
+        
+        start += 1                      # questo arriverà fino a t+h
+        tmp[i] = tmp[i]
+    
+    ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=ts_seasonal_forecast.index[len(ts_seasonal_forecast) - 1], periods=sfasamento, freq='D'))
+    ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)
+    
+    # previsioni sulla parte de-stagionata
+    new_h = h + sfasamento
+    (previsione, _ ,intervallo) = results.forecast(steps=new_h)
+    ts_NOseasonal_forecast = pd.Series(previsione, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
+    
+    # previsioni totali
+    ts_forecast = ts_seasonal_forecast + ts_NOseasonal_forecast
+    
+    # intervalli
+    intervallo_sup = [0.0] * new_h
+    intervallo_inf = [0.0] * new_h
+    seasonal_interval_sum = [0.0] * new_h
+    ind = 0
+    for n in intervallo[:, [0]]:
+        intervallo_sup[ind] = float(n)
+        ind+=1
+    ind = 0
+    for n in intervallo[:, [1]]:
+        intervallo_inf[ind] = float(n)
+        ind+=1
+    
+    ind = 0
+    for i in range(len(ts_seasonal_forecast) - new_h, len(ts_seasonal_forecast)):
+        seasonal_interval_sum[ind] = float(ts_seasonal_forecast[i])
+        ind+=1
+    
+    for i in range(0, new_h):
+        intervallo_sup[i] += seasonal_interval_sum[i]
+    for i in range(0, new_h):
+        intervallo_inf[i] += seasonal_interval_sum[i]
+    
+    # grafico
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Forecasting con ARIMA{} per {}'.format(orders, timeseries.name))
+    plt.plot(timeseries, label='Observed', color='black')
+    plt.plot(model, label='ARIMA{} model'.format(orders), color='green')
+    plt.plot(ts_forecast, label='Forecast', color='red')
+    plt.fill_between(pd.date_range(start=last_observation, periods=new_h , freq='D'), 
+                 intervallo_sup, 
+                 intervallo_inf, 
+                 color='k', alpha=.25)
+    plt.legend(loc='best');
+    plt.show()
+    
+    return ts_forecast
+
+
+def accuracy_arima(timeseries, train_length, m):
+    """
+    Verifica dell'accuratezza di un modello ARIMA
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
+    m : int
+        numero di osservazioni in un anno
+
+    Returns
+    -------
+    float
+        MSE
+
+    """
+    # spezzo la serie temporale
+    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
+
+    decomposition = seasonal_decompose(train, period=m)
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+
+    seas_adj = trend + residual
+    seas_adj.dropna(inplace=True)
+    seas_adj.name = ts.name
+    
+    # cerco un modello
+    mod_arima = arima_model(seas_adj, seasonal=seasonal)
+
+    # predico valori
+    test_forecast = arima_forecasting(train, seasonal, m, mod_arima)
+    
+    # calcolo MSE
+    test_forecast.dropna(inplace=True)
+    test = timeseries[pd.date_range(start=seas_adj.index[len(seas_adj)-1], end=timeseries.index[len(timeseries)-1], freq='D')]
+    se = test_forecast - test
+    se.dropna(inplace=True)
+    
+    mse = (se ** 2).mean()
+    return round(mse, 2)
+
+
+# TODO
 def order_selection(timeseries, m):
     """
     Selezione degli ordini (p,d,q) e (P,D,Q,S) con pmdarima
@@ -192,95 +448,6 @@ def sarimax_forecasting(timeseries, m, h):
     plt.show()
     
     return pred_uc
-
-
-def iterative_order_selection(timeseries, min_order=0, max_order=4):
-    """
-    Selezione iterativa degli ordini (p,d,q) per ARIMA
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    min_order : int
-        l'ordine minimo da considerare (default 0)
-    max_order : int
-        l'ordine massimo da considerare (default 4)
-
-    Returns
-    -------
-    tuple
-        (p,d,q)
-
-    """
-    # calcolo tutte le possibili combinazioni di (p,d,q)
-    p = d = q = range(min_order, max_order+1)
-    pdq = list(itertools.product(p, d, q))
-    
-    # provo tutte le combinazioni
-    orders = []
-    aics = []
-    warnings.filterwarnings("ignore")
-    for param in pdq:
-        try:
-            mod = ARIMA(timeseries, order=param)
-            results = mod.fit()
-            print('ARIMA{} - AIC:{}'.format(param, results.aic))
-            orders.append(param)
-            aics.append(results.aic)
-        except:
-            continue
-    
-    # ritorno la combinazione che realizza il modello con AIC più basso
-    index_min_aic = np.argmin(aics)
-    return orders[index_min_aic]
-
-
-def arima_forecasting(timeseries, h):
-    """
-    Forecasting con ARIMA
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    h : int
-        l'orizzonte
-
-    Returns
-    -------
-    DataFrames
-        la serie temporale basata sui risultati del forecast sul modello ARIMA
-
-    """
-    # realizzo il modello con gli ordini ottenuti dalla ricerca iterativa
-    o = iterative_order_selection(timeseries)
-    mod = ARIMA(timeseries, order=o)
-    results = mod.fit()
-    print(results.summary())
-    
-    # predico h valori
-    pred = results.forecast(h) # ritorna una tupla (forecast, stderr, conf_int)
-    
-    # calcolo la serie temporale dei valori predetti
-    future_dates = pd.date_range(start=timeseries.index[len(timeseries)-1], periods=h, freq='D')
-    future_series = pd.Series(data=pred[0], index=future_dates)
-    future_series_ci_min = pd.Series(data=pred[2][:, 0], index=future_dates)
-    future_series_ci_max = pd.Series(data=pred[2][:, 1], index=future_dates)
-    forecasts = pd.concat([future_series, future_series_ci_min, future_series_ci_max], axis=1)
-    
-    # grafico dei valori osservati e dei valori predetti
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(timeseries.name)
-    ax = timeseries.plot(label='Observed', color='black')
-    forecasts[0].plot(ax=ax, label='Forecast', color='green')
-    ax.fill_between(forecasts.index,
-                    forecasts[1],
-                    forecasts[2], color='k', alpha=.25)
-    plt.legend()
-    plt.show()
-    
-    return forecasts
 
 
 def tbats_forecasting(timeseries, h, s):
@@ -377,7 +544,7 @@ def fourier_forecasting(timeseries, m, end_train):
     return round(mse, 2)
 
 
-def prophet_forecasting(timeseries, h): # TODO: da sistemare
+def prophet_forecasting(timeseries, h):
     """
     Forecasting con Prophet
 
@@ -450,45 +617,6 @@ def accuracy_sarimax(timeseries, m, train_length):
     return round(mse, 2)
 
 
-def accuracy_arima(timeseries, train_length):
-    """
-    Verifica visuale dell'accuratezza di un modello ARIMA
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    train_length : int
-        la lunghezza del set di train (in rapporto alla serie completa)
-
-    Returns
-    -------
-    float
-        MSE
-
-    """
-    # spezzo la serie temporale
-    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
-
-    # predico valori per la lunghezza del set di test
-    arima_forecasts = arima_forecasting(train, len(timeseries)-len(train))
-    
-    # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(timeseries.name)
-    ax = timeseries.plot(label='Observed', color='black')
-    arima_forecasts[0].plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
-    ax.fill_between(arima_forecasts.index,
-                    arima_forecasts[1],
-                    arima_forecasts[2], color='k', alpha=.2)
-    plt.legend()
-    plt.show()
-    
-    # calcolo del MSE
-    mse = ((arima_forecasts[0] - timeseries) ** 2).mean()
-    return round(mse, 2)
-
-
 def accuracy_tbats(timeseries, forecasts):
     """
     Verifica visuale dell'accuratezza di un modello TBATS
@@ -520,7 +648,7 @@ def accuracy_tbats(timeseries, forecasts):
     return round(mse, 2)
     
 
-def accuracy_prophet(timeseries, end_train): # TODO: da sistemare
+def accuracy_prophet(timeseries, end_train):
     """
     Verifica visuale dell'accuratezza di un modello ARIMA
 
@@ -571,61 +699,41 @@ if __name__ == '__main__':
     # colonne: MAGLIE, CAMICIE, GONNE, PANTALONI, VESTITI, GIACCHE
     ts = data['CAMICIE']
     
-    # %% Analisi di stagionalità e stazionarietà
-    for col in data.columns:
-        ts = data[col]
-        ts_plot(ts)
+    #for col in data.columns:
+        #ts = data[col]
         
-        # stagionalità:
-        decomposition = seasonal_decompose(ts, period=12)
-        decomposition.seasonal.plot(figsize=(40,20), title='Stagionalità '+col, fontsize=14)
-        
-        # plot di autocorrelazione e autocorrelazione parziale:
-        acf_pacf(ts)
-        
-        # stazionarietà:
-        test_stationarity(ts) # the test statistic is smaller than the 1% critical values so we can say with 99% confidence that ts is stationary
-        
-    # %% SARIMAX
-    # forecasting con SARIMAX (basato sugli orders ottenuti da pmdarima):
-    sarimax_forecasting(ts, 7, 50) # ignoro la stagionalità annuale
+    # %% Grafici, ACF/PACF, stazionarietà
+    ts_plot(ts)
     
-    # controllo l'accuratezza delle previsioni di SARIMAX confrontandole con la serie stessa:
-    mse_sarimax = accuracy_sarimax(ts, 7, 0.8) # uso i dati fino alla fine del 2016 per prevedere i successivi
+    # plot di autocorrelazione e autocorrelazione parziale:
+    acf_pacf(ts)
+    
+    # stazionarietà:
+    test_stationarity(ts) # the test statistic is smaller than the 1% critical values so we can say with 99% confidence that ts is stationary
+    
+    # %% Stagionalità
+    decomposition = seasonal_decompose(ts, period=365)
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Stagionalità ' + ts.name)
+    plt.plot(seasonal)    
+    plt.show()
+    
+    # seasonally adjusted data:
+    seas_adj = trend + residual
+    seas_adj.dropna(inplace=True)
+    seas_adj.name = ts.name
     
     # %% ARIMA
-    # forecasting con ARIMA (basato sugli orders ottenuti minimizzando AIC):
-    arima_forecasting(ts, 50)
+    # modello ARIMA (basato sugli orders ottenuti minimizzando AIC):
+    mod_arima = arima_model(seas_adj, seasonal=seasonal)
+    
+    # forecasting con ARIMA:
+    fcast_arima = arima_forecasting(ts, seasonal, 365, mod_arima)
     
     # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
-    mse_arima = accuracy_arima(ts, 0.8) # uso i dati fino alla fine del 2016 per prevedere i successivi
-    
-    # %% TBATS
-    ts_to_train = ts[pd.date_range(start=data.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D')]
-    
-    # forecasting con TBATS:
-    ts_forecast = tbats_forecasting(ts_to_train, len(ts)-len(ts_to_train), [7, 365.25])
-    
-    # calcolo la serie temporale dei valori predetti:
-    future_dates = pd.date_range(start=ts.index[len(ts_to_train)], periods=len(ts)-len(ts_to_train), freq='D')
-    future_series = pd.Series(data=ts_forecast, index=future_dates)
-    
-    # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
-    mse_tbats = accuracy_tbats(ts, future_series)
-    
-    # %% SARIMAX (with Fourier terms)
-    mse_fourier = fourier_forecasting(ts, 7, 0.8)
-    
-    # %% Prophet
-    # forecasting con Prophet:
-    prophet_forecasting(ts, 50)
-    
-    # controllo l'accuratezza delle previsioni di Prophet confrontandole con la serie stessa:
-    mse_prophet = accuracy_prophet(ts, '2016') # uso i dati fino alla fine del 2016 per prevedere i successivi
-    
-    # %% Comparazione dei modelli
-    print("SARIMAX:", mse_sarimax)
-    print("ARIMA:", mse_arima)
-    print("TBATS:", mse_tbats)
-    print("Fourier:", mse_fourier)
+    mse_arima = accuracy_arima(ts, 0.8, 365)
     
