@@ -344,8 +344,7 @@ def accuracy_arima(timeseries, train_length, m):
 
     Returns
     -------
-    float
-        MSE
+    None.
 
     """
     # spezzo la serie temporale
@@ -364,7 +363,7 @@ def accuracy_arima(timeseries, train_length, m):
     mod_arima = arima_model(seas_adj, seasonal=seasonal)
 
     # predico valori
-    test_forecast = arima_forecasting(train, seasonal, m, mod_arima)
+    test_forecast = arima_forecasting(timeseries, seasonal, m, mod_arima)
     
     # calcolo MSE
     test_forecast.dropna(inplace=True)
@@ -372,9 +371,18 @@ def accuracy_arima(timeseries, train_length, m):
     se = test_forecast - test
     se.dropna(inplace=True)
     
-    mse = (se ** 2).mean()
-    return round(mse, 2)
-
+    print("MSE=%.4f"%(se ** 2).mean())
+    
+    # calcolo MAE e MAPE
+    errore = test_forecast - timeseries
+    errore.dropna(inplace=True)
+    
+    sommaPrevOss = test_forecast + timeseries
+    sommaPrevOss.dropna(inplace=True)
+    
+    print("MAE=%.4f"%(sum(abs(errore))/len(errore)))
+    print("MAPE=%.4f"%(sum(200 * abs(errore) / sommaPrevOss)/len(sommaPrevOss)))
+    
 
 # TODO
 def order_selection(timeseries, m):
@@ -735,5 +743,5 @@ if __name__ == '__main__':
     fcast_arima = arima_forecasting(ts, seasonal, 365, mod_arima)
     
     # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
-    mse_arima = accuracy_arima(ts, 0.8, 365)
+    accuracy_arima(ts, 0.8, 365)
     
