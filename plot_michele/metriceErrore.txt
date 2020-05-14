@@ -1,0 +1,23 @@
+MAGLIE
+Calcoliamo  MAE=9.2218
+Calcoliamo sMAPE=66.8188
+
+CAMICIE
+Calcoliamo  MAE=7.6546
+Calcoliamo sMAPE=70.5000
+
+GONNE
+Calcoliamo  MAE=1.4016
+Calcoliamo sMAPE=116.6572
+
+PANTALONI
+Calcoliamo  MAE=6.9779
+Calcoliamo sMAPE=50.0719
+
+VESTITI
+Calcoliamo  MAE=8.0241
+Calcoliamo sMAPE=68.0580
+
+GIACCHE
+Calcoliamo  MAE=4.2988
+Calcoliamo sMAPE=3458.7315

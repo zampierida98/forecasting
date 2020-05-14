@@ -11,15 +11,15 @@ from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf, pacf, adfuller
 
-SMALL_SIZE = 28 
-MEDIUM_SIZE = 30
-BIGGER_SIZE = 32
+SMALL_SIZE = 32
+MEDIUM_SIZE = 34
+BIGGER_SIZE = 40
 COLOR_ORIG = 'black'
 COLOR_MODEL = 'green'
 COLOR_FOREC = 'red'
 COLOR_ACF = 'blue'
  
-plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
+plt.rc('font', size=MEDIUM_SIZE)         # controls default text sizes 
 plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
@@ -73,22 +73,25 @@ def plotAcf(ts, isPacf=False, both=False, lags=40, title=""):
     part_auto_cor = pacf(ts, nlags=lags)
     
     plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(title)
     if not both:
         if not isPacf:
             plt.plot(auto_cor)
+            plt.title("ACF di " + title)
         else:
             plt.plot(part_auto_cor)
+            plt.title("PACF di " + title)
         plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='red')
         plt.axhline(y=0, linestyle="--", color="red")
         plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='red')
     else:
         plt.subplot(211)
+        plt.title("ACF di " + title)
         plt.plot(auto_cor,  label='ACF')
         plt.axhline(y=-1.96/np.sqrt(len(ts)), linestyle='--',color='red')
         plt.axhline(y=1.96/np.sqrt(len(ts)), linestyle='--',color='red')
         plt.legend(loc='best');
         plt.subplot(212)
+        plt.title("PACF di " + title)
         plt.plot(part_auto_cor, label='PACF')
         plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='red')
         plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='red')
@@ -234,7 +237,7 @@ if __name__ == "__main__":
     dataframe = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
     # Analizziamo i dati graficamente
-    for column in {'MAGLIE'}:#dataframe:
+    for column in dataframe: #{'MAGLIE'}:
         # Recuperiamo una serie temporale
         serie_totale = dataframe[column]
         # tiriamo fuori il training set dell'80% sui dati
@@ -247,7 +250,7 @@ if __name__ == "__main__":
         timeplot(ts=serie, label=column)
         
         # Cerchiamo di capire se la serie è stagionale e/o presenta trend dalla funzione acf
-        plotAcf(serie, both=True, title="Acf " + column) #, lags=int(len(serie)/3)
+        plotAcf(serie, both=True, title=column) #, lags=int(len(serie)/3)
         
         # Forza delle componenti stagionalità e trend
         strength_s, strength_t = strength_seasonal_trend(serie, season)
@@ -267,22 +270,26 @@ if __name__ == "__main__":
         seasonal = decomposition.seasonal
         residual = decomposition.resid
         
-        plt.figure(figsize=(40, 20), dpi=80)
-        plt.title("Decomposizione serie")
+        plt.figure(figsize=(40, 35), dpi=80)
         plt.subplot(411)
-        plt.plot(serie, label='Original', color=COLOR_ORIG)
+        plt.plot(serie, color=COLOR_ORIG)
+        plt.title("Serie originale di " + column)
         plt.legend(loc='best');
         plt.subplot(412)
-        plt.plot(trend, label='Trend', color=COLOR_ACF)
+        plt.plot(trend, color=COLOR_ACF)
+        plt.title("Trend di " + column)
         plt.legend(loc='best');
         plt.subplot(413)
-        plt.plot(seasonal, label='Seasonal', color=COLOR_ACF)
+        plt.title("Stagionalità di " + column)
+        plt.plot(seasonal, color=COLOR_ACF)
         plt.legend(loc='best');
         plt.subplot(414)
-        plt.plot(residual, label='Residuals', color=COLOR_ACF)
+        plt.title("Residui di " + column)
+        plt.plot(residual, color=COLOR_ACF)
         plt.legend(loc='best');
         plt.show()
         
+        # %%
         # Serie de stagionata
         serie_destagionata = trend + residual
         serie_destagionata.dropna(inplace=True)
@@ -290,7 +297,7 @@ if __name__ == "__main__":
         # Realizzazione ARIMA        
         serie_diff = serie_destagionata.diff()
         serie_diff.dropna(inplace=True)
-        plotAcf(serie_diff, both=True, lags=100, title="Acf e Pacf della serie " + column + " differenziata")
+        plotAcf(serie_diff, both=True, lags=100, title=column)
         
         # Definiamo dunque il modello ARIMA    
         p,q = p_QForArima(serie_diff, len(serie_diff))        
@@ -311,13 +318,14 @@ if __name__ == "__main__":
         
         # %%
         # Mettiamo in confronto i due modelli
-        plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot("CONFRONTO FRA: " + 'Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')' + " e " + 'Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')')
+        plt.figure(figsize=(40, 25), dpi=80)
         plt.subplot(211)
+        plt.title('Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +') di ' + column)
         plt.plot(serie_destagionata, label=column, color=COLOR_ORIG)
         plt.plot(arima_model, label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')', color=COLOR_MODEL)
         plt.legend(loc='best');
         plt.subplot(212)
+        plt.title('MIGLIOR MODELLO: Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +') di ' + column)
         plt.plot(serie_destagionata, label=column, color=COLOR_ORIG)
         
         best_arima_model = pd.Series(best_result_model.fittedvalues, copy=True)
@@ -411,14 +419,18 @@ if __name__ == "__main__":
         ts_NOseasonal_forecast = pd.Series(previsione, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
         
         plt.figure(figsize=(40, 20), dpi=80)
-        plt.title("PREVISIONI CON " + 'Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
+        plt.title("Previsioni di " + column + " con il " + 'Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
+        plt.plot(serie_totale, color=COLOR_ORIG, label='Osservazioni reali')
         plt.plot(best_arima_model_con_stag, color=COLOR_MODEL, label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
-        plt.plot(ts_seasonal_forecast + ts_NOseasonal_forecast,color=COLOR_FOREC, label='Previsioni')
-
-        plt.plot(serie_totale[pd.date_range(
+        
+        
+        '''
+        [pd.date_range(
             start=last_observation, 
-            periods=new_h, freq='D')], linestyle='-', 
-            color=COLOR_ORIG, label='Osservazioni reali')
+            periods=new_h, freq='D')]'''
+        
+        ts_forecast = ts_seasonal_forecast + ts_NOseasonal_forecast
+        plt.plot(ts_forecast,color=COLOR_FOREC, label='Previsioni')
         
         intervallo_sup = [0.0] * new_h
         intervallo_inf = [0.0] * new_h
@@ -452,3 +464,13 @@ if __name__ == "__main__":
                          color=COLOR_ORIG, alpha=.25)
         plt.legend(loc='best');
         plt.show()
+        
+        errore = ts_forecast - serie_totale
+        errore.dropna(inplace=True)
+        
+        # SMAPE
+        sommaPrevOss = ts_forecast + serie_totale
+        sommaPrevOss.dropna(inplace=True)
+        
+        print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
+        print("Calcoliamo sMAPE=%.4f"%(sum(200 * abs(errore) / sommaPrevOss)/len(sommaPrevOss)))
