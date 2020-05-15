@@ -511,7 +511,6 @@ def accuracy_sarimax(timeseries, train_length, m):
     print("MAPE=%.4f"%(sum(200 * abs(errore) / sommaPrevOss)/len(sommaPrevOss)))
 
 
-# TODO
 def tbats_forecasting(timeseries, h, s):
     """
     Forecasting con TBATS
@@ -535,7 +534,7 @@ def tbats_forecasting(timeseries, h, s):
     estimator = TBATS(
         seasonal_periods=s,
         use_arma_errors=False,  # shall try only models without ARMA
-        use_box_cox=False  # will not use Box-Cox
+        use_box_cox=False       # will not use Box-Cox
     )
     model = estimator.fit(timeseries)
     
@@ -546,9 +545,60 @@ def tbats_forecasting(timeseries, h, s):
     # summarize fitted model
     print(model.summary())
     
-    return model.forecast(steps=h)
+    y_forecasted, confidence_info = model.forecast(steps=h, confidence_level=0.95)
+    
+    return (y_forecasted, confidence_info)
 
 
+def accuracy_tbats(timeseries, train_length):
+    """
+    Verifica dell'accuratezza di un modello TBATS
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
+
+    Returns
+    -------
+    None.
+
+    """
+    # spezzo la serie temporale
+    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
+
+    # forecasting con TBATS:
+    (forecast, forecast_ci) = tbats_forecasting(train, len(ts)-len(train), [7, 365.25])
+    
+    # calcolo la serie temporale dei valori predetti:
+    future_dates = pd.date_range(start=ts.index[len(train)], periods=len(timeseries)-len(train), freq='D')
+    future_series = pd.Series(data=forecast, index=future_dates)
+    ci_min = pd.Series(forecast_ci['lower_bound'], index=future_dates)
+    ci_max = pd.Series(forecast_ci['upper_bound'], index=future_dates)
+    
+    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Forecasting con TBATS per {}'.format(timeseries.name))
+    ax = timeseries.plot(label='Observed', color='black')
+    future_series.plot(ax=ax, label='Forecast', alpha=.7, color='red')
+    ax.fill_between(future_dates, ci_min, ci_max, color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo MSE
+    se = future_series - timeseries
+    se.dropna(inplace=True)
+    print("MSE=%.4f"%(se ** 2).mean())
+    
+    # calcolo MAE
+    test = timeseries[pd.date_range(start=train.index[len(train)-1], end=timeseries.index[len(timeseries)-1], freq='D')]
+    test = test[1:]
+    print("MAE=%.4f"%np.mean(np.abs(forecast - test)))
+
+
+# TODO
 def fourier_forecasting(timeseries, m, end_train):
     """
     Forecasting con SARIMAX (with Fourier terms) e verifica dell'accuratezza
@@ -636,37 +686,6 @@ def prophet_forecasting(timeseries, h):
     
     return forecast[len(timeseries):len(timeseries)+h]
 
-
-def accuracy_tbats(timeseries, forecasts):
-    """
-    Verifica visuale dell'accuratezza di un modello TBATS
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    forecasts : Series
-        la serie dei valori predetti
-
-    Returns
-    -------
-    float
-        MSE
-
-    """
-    # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(timeseries.name)
-    ax = timeseries.plot(label='Observed', color='black')
-    forecasts.plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
-    #ax.fill_between(forecasts.index, forecasts[1], forecasts[2], color='k', alpha=.2)
-    plt.legend()
-    plt.show()
-    
-    # calcolo del MSE
-    mse = ((forecasts[0] - timeseries) ** 2).mean()
-    return round(mse, 2)
-    
 
 def accuracy_prophet(timeseries, end_train):
     """
@@ -763,4 +782,8 @@ if __name__ == '__main__':
     
     # controllo l'accuratezza delle previsioni di SARIMAX confrontandole con la serie stessa:
     accuracy_sarimax(ts, 0.8, 7)
+    
+    # %% TBATS
+    # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
+    accuracy_tbats(ts, 0.8)
     
