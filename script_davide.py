@@ -382,28 +382,6 @@ def accuracy_arima(timeseries, train_length, m):
     
     print("MAE=%.4f"%(sum(abs(errore))/len(errore)))
     print("MAPE=%.4f"%(sum(200 * abs(errore) / sommaPrevOss)/len(sommaPrevOss)))
-    
-
-# TODO
-def order_selection(timeseries, m):
-    """
-    Selezione degli ordini (p,d,q) e (P,D,Q,S) con pmdarima
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    m : int
-        numero di osservazioni in un anno
-
-    Returns
-    -------
-    tuple
-        ((p,d,q), (P,D,Q,S))
-
-    """
-    model = pm.auto_arima(timeseries, seasonal=True, m=m, suppress_warnings=True, trace=True)
-    return (model.order, model.seasonal_order)
 
 
 def sarimax_forecasting(timeseries, m, h):
@@ -415,7 +393,7 @@ def sarimax_forecasting(timeseries, m, h):
     timeseries : Series
         la serie temporale
     m : int
-        numero di osservazioni in un anno
+        stagionalità
     h : int
         l'orizzonte
 
@@ -426,38 +404,114 @@ def sarimax_forecasting(timeseries, m, h):
 
     """
     # realizzo il modello con gli ordini ottenuti da pmdarima
-    (o, so) = order_selection(timeseries, m)
-    mod = sm.tsa.statespace.SARIMAX(timeseries,
-                                    order=o,
-                                    seasonal_order=so,
-                                    enforce_stationarity=False,
-                                    enforce_invertibility=False)
-    
-    results = mod.fit()
-    print(results.summary())
+    model = pm.auto_arima(timeseries, seasonal=True, m=m, suppress_warnings=True, trace=True)
+    print(model.summary())
     
     # controllo la sua bontà
-    results.plot_diagnostics(figsize=(40,20))
+    plt.figure(figsize=(40, 20), dpi=80)
+    model.plot_diagnostics(figsize=(40, 20))
     plt.show()
     
     # predico h valori
-    pred_uc = results.get_forecast(steps=h)
-    pred_ci = pred_uc.conf_int()
+    forecast = model.arima_res_.get_forecast(steps=h)
+    
+    forecast_values = forecast.predicted_mean
+    forecast_ci = forecast.conf_int()
+    
+    forecast_dates = pd.date_range(start=timeseries.index[len(timeseries)-1], periods=h+1, freq='D')
+    forecast_dates = forecast_dates[1:]
+    ts_forecast = pd.Series(forecast_values, index=forecast_dates)
+    ts_ci_min = pd.Series(forecast_ci[:, 0], index=forecast_dates)
+    ts_ci_max = pd.Series(forecast_ci[:, 1], index=forecast_dates)
     
     # grafico dei valori osservati e dei valori predetti
     plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(timeseries.name)
+    plt.title('Forecasting con SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
     ax = timeseries.plot(label='Observed', color='black')
-    pred_uc.predicted_mean.plot(ax=ax, label='Forecast', color='green')
-    ax.fill_between(pred_ci.index,
-                    pred_ci.iloc[:, 0],
-                    pred_ci.iloc[:, 1], color='k', alpha=.25)
+    ts_forecast.plot(ax=ax, label='Forecast', color='red')
+    ax.fill_between(forecast_dates,
+                    ts_ci_min,
+                    ts_ci_max, color='k', alpha=.25)
     plt.legend()
     plt.show()
     
-    return pred_uc
+    return forecast
 
 
+def accuracy_sarimax(timeseries, train_length, m):
+    """
+    Verifica dell'accuratezza di un modello SARIMAX
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
+    m : int
+        stagionalità
+    
+    Returns
+    -------
+    None.
+
+    """
+    # spezzo la serie temporale
+    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
+
+    # realizzo il modello sulla serie completa
+    model = pm.auto_arima(timeseries, seasonal=True, m=m, suppress_warnings=True, trace=True)
+    print(model.summary())
+    
+    # controllo la sua bontà
+    plt.figure(figsize=(40, 20), dpi=80)
+    model.plot_diagnostics(figsize=(40, 20))
+    plt.show()
+    
+    # osservo i valori predetti
+    pred = model.arima_res_.get_prediction(start=len(train), dynamic=False)
+    pred_ci = pred.conf_int()
+    
+    pred_dates = pd.date_range(start=timeseries.index[int(len(timeseries) * train_length)+1], periods=len(timeseries)-len(train), freq='D')
+    ts_pred = pd.Series(pred.predicted_mean, index=pred_dates)
+    ts_ci_min = pd.Series(pred_ci[:, 0], index=pred_dates)
+    ts_ci_max = pd.Series(pred_ci[:, 1], index=pred_dates)
+    
+    # ricavo il modello
+    sarimax_mod = model.arima_res_.get_prediction(end=len(train)-1, dynamic=False)
+    sarimax_dates = pd.date_range(start=data.index[0], end=timeseries.index[len(train)-1], freq='D')
+    sarimax_ts = pd.Series(sarimax_mod.predicted_mean, index=sarimax_dates)
+    
+    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Forecasting con SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
+    ax = timeseries.plot(label='Observed', color='black')
+    sarimax_ts.plot(ax=ax, label='SARIMAX{}x{} model'.format(model.order, model.seasonal_order), color='green')
+    ts_pred.plot(ax=ax, label='One-step ahead Forecast', alpha=.7, color='red')
+    ax.fill_between(pred_dates,
+                    ts_ci_min,
+                    ts_ci_max, color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo MSE
+    se = ts_pred - timeseries
+    se.dropna(inplace=True)
+    
+    print("MSE=%.4f"%(se ** 2).mean())
+    
+    # calcolo MAE e MAPE
+    errore = ts_pred - timeseries
+    errore.dropna(inplace=True)
+    
+    sommaPrevOss = ts_pred + timeseries
+    sommaPrevOss.dropna(inplace=True)
+    
+    print("MAE=%.4f"%(sum(abs(errore))/len(errore)))
+    print("MAPE=%.4f"%(sum(200 * abs(errore) / sommaPrevOss)/len(sommaPrevOss)))
+
+
+# TODO
 def tbats_forecasting(timeseries, h, s):
     """
     Forecasting con TBATS
@@ -581,48 +635,6 @@ def prophet_forecasting(timeseries, h):
     m.plot_components(forecast);
     
     return forecast[len(timeseries):len(timeseries)+h]
-    
-    
-def accuracy_sarimax(timeseries, m, train_length):
-    """
-    Verifica visuale dell'accuratezza di un modello SARIMAX
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    m : int
-        numero di osservazioni in un anno
-    train_length : int
-        la lunghezza del set di train (in rapporto alla serie completa)
-
-    Returns
-    -------
-    float
-        MSE
-
-    """
-    # spezzo la serie temporale
-    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
-
-    # predico valori per la lunghezza del set di test
-    forecasts = sarimax_forecasting(train, m, len(timeseries)-len(train))
-    pred_ci = forecasts.conf_int()
-    
-    # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(timeseries.name)
-    ax = timeseries.plot(label='Observed', color='black')
-    forecasts.predicted_mean.plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
-    ax.fill_between(pred_ci.index,
-                    pred_ci.iloc[:, 0],
-                    pred_ci.iloc[:, 1], color='k', alpha=.2)
-    plt.legend()
-    plt.show()
-    
-    # calcolo del MSE
-    mse = ((forecasts.predicted_mean[0] - timeseries) ** 2).mean()
-    return round(mse, 2)
 
 
 def accuracy_tbats(timeseries, forecasts):
@@ -705,7 +717,7 @@ def accuracy_prophet(timeseries, end_train):
 if __name__ == '__main__':
     data = load_data('Dati_Albignasego/Whole period.csv')
     # colonne: MAGLIE, CAMICIE, GONNE, PANTALONI, VESTITI, GIACCHE
-    ts = data['CAMICIE']
+    ts = data['MAGLIE']
     
     #for col in data.columns:
         #ts = data[col]
@@ -744,4 +756,11 @@ if __name__ == '__main__':
     
     # controllo l'accuratezza delle previsioni di ARIMA confrontandole con la serie stessa:
     accuracy_arima(ts, 0.8, 365)
+    
+    # %% SARIMAX
+    # forecasting con SARIMAX (basato sugli orders ottenuti da pmdarima):
+    fcast_sarimax = sarimax_forecasting(ts, 7, 50) # ignoro la stagionalità annuale
+    
+    # controllo l'accuratezza delle previsioni di SARIMAX confrontandole con la serie stessa:
+    accuracy_sarimax(ts, 0.8, 7)
     
