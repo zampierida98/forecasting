@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+##########################################################
+
 def kpss_test(timeseries):
     
     """
@@ -56,9 +58,9 @@ def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
             plt.subplot(position)
         else:
             plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(timeseries, label='Original')
-        plt.plot(rolmean, color='red', label='Rolling Mean')
-        plt.plot(rolstd, color='black', label='Rolling Std')
+        plt.plot(timeseries, label='Original', color = 'black')
+        plt.plot(rolmean, color='orange', label='Rolling Mean',  linewidth=3)
+        plt.plot(rolstd, color='orange', label='Rolling Std', linestyle = '--',  linewidth=3)
         plt.legend(loc='best')
         plt.title('Rolling Mean & Standard Deviation')
         plt.show(block=False)
@@ -243,11 +245,11 @@ def ac_pac_function(timeseries, pos1=0, pos2=0):
     else:
         plt.subplot(pos1)
         
-    plt.plot(lag_acf)
+    plt.plot(lag_acf, color = 'orange')
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
-    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
-    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
+    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='black')
+    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='black')
     plt.title('Autocorrelation Function')
     
     if pos1==0 and pos2==0:
@@ -256,11 +258,11 @@ def ac_pac_function(timeseries, pos1=0, pos2=0):
     else:
         plt.subplot(pos2)
    
-    plt.plot(lag_pacf)
+    plt.plot(lag_pacf, color = 'orange')
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
-    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
-    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='red')
+    plt.axhline(y=-1.96/np.sqrt(len(timeseries)),linestyle='--',color='black')
+    plt.axhline(y=1.96/np.sqrt(len(timeseries)),linestyle='--',color='black')
     plt.title('Partial Autocorrelation Function')
     plt.tight_layout()
     
