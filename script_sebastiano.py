@@ -143,20 +143,22 @@ print(restored2.head())
 #%%
 #NUOVO! provo con sarimax per poter applicare una differenziazione "normale" e una con stagionalità
 
-sarima_model = SARIMAX(ts_log, order=(0, 1, 2), seasonal_order=(0, 1, 2, 7), enforce_invertibility=False, enforce_stationarity=False)
+sarima_model = SARIMAX(ts_log, order=(4, 1, 3), seasonal_order=(2, 0, 2, 7))#, enforce_invertibility=False, enforce_stationarity=False)
 sarima_fit = sarima_model.fit(disp = -1)
 
-sarima_pred = sarima_fit.get_prediction("2018-06-11", "2018-12-31")
+sarima_pred = sarima_fit.forecast(steps = int(len(valid)))
+#get_prediction("2018-06-11", "2018-12-31")
 
 plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts_log_diff1, label = "Serie trasformata", color = 'black')
-plt.plot(sarima_fit.fittedvalues, color='green', label='ARIMA')
+plt.plot(train, label = "Training set", color = 'black')
+plt.plot(valid, label = "Validation set", color = "black", linestyle = "--")
+plt.plot(sarima_fit.fittedvalues, color='green', label='SARIMAX model')
+plt.plot(sarima_pred, color="red", label='SARIMAX predictions')
 plt.title("Sarima (%d, 1, %d) x (%d, 1, %d, %d)" %(0, 2, 0, 2, season_2))
-plt.legend(loc='best');
-#plt.title('RSS: %.4f'% sum((results_ARIMA.fittedvalues-ts_log_diff1)**2))
+plt.legend(loc='best')
 
 #%%
-
+"""
 mt.ac_pac_function(ts_log_diff2)
 p, q = mt.p_q_for_ARIMA(ts_log_diff2)
 print(p, q)
@@ -171,15 +173,13 @@ plt.title("Arima (%d, 1, %d)"% (p, q))
 plt.legend(loc='best');
 #plt.title('RSS: %.4f'% sum((results_ARIMA.fittedvalues-ts_log_diff1)**2))
 
-#%%
-
 predizione_ARIMA_diff = pd.Series(data = results_ARIMA.fittedvalues, copy = True)
 
 #riporto a originale
 predizione_ARIMA_diff_cumsum = predizione_ARIMA_diff.cumsum()
 predizione_ARIMA_log = pd.Series(ts_log.iloc[0], index = ts_log.index)
 predizione_ARIMA_log = predizione_ARIMA_log.add(predizione_ARIMA_diff_cumsum, fill_value = 0)
-
+"""
 #%%
 #predizione_ARIMA = np.exp(predizione_ARIMA_log)
 """
@@ -194,6 +194,7 @@ plt.legend(loc='best');
 """
 
 #%%
+"""
 p, q = 2, 2
 
 my_ts = ts_log.diff(periods=365)
@@ -248,3 +249,4 @@ errore.dropna(inplace=True)
 
 print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
 
+"""

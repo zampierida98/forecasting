@@ -15,7 +15,10 @@ source: https://machinelearningmastery.com/exponential-smoothing-for-time-series
 PROBLEMA:
 1 - Penso che sia normale per il simple exponential smoothing avere come predizione una linea retta.
 2 - Bisogna aggiungere gli intervalli di confidenza per le previsioni.
-3 - Exponential smoothing ha una "discesa anomala"
+3 - Exponential smoothing ha una "discesa anomala". Ho provato a risolvere sommando il risultato del
+    simple exponential smoothing ma non è soddisfacente.
+4 - Non funzionano le varianti con "multiplicative" invece di "additive" perchè i valori della serie
+    devono essere tutti positivi (e lo sono...)
 """
 
 import datetime
@@ -133,9 +136,13 @@ if __name__ == "__main__":
     
     #EXPONENTIAL SMOOTHING
     
+    for i in range(1, len(train)):
+        if train[i] < 0:
+            train[i] = 0
+    
     # Provare a cambiare i parametri per un migliore risultato...
     
-    model = ExponentialSmoothing(train, trend="additive", damped = False, seasonal="additive", seasonal_periods=year)
+    model = ExponentialSmoothing(train, trend="additive", damped = True, seasonal="additive", seasonal_periods=year)
     
     # fit model
     
