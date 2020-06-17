@@ -1,0 +1,10 @@
+miglioramento richieste profe
+
+9.1315
+165.6417
+
+
+togliendo l'anno 2013
+
+>>>>>> Calcoliamo MAE=8.9743
+>>>>>> Calcoliamo MSE=156.2296

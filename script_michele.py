@@ -237,11 +237,15 @@ if __name__ == "__main__":
     dataframe = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
     # Analizziamo i dati graficamente
-    for column in dataframe: #{'MAGLIE'}:
+    for column in {'MAGLIE'}: #dataframe:
         # Recuperiamo una serie temporale
         serie_totale = dataframe[column]
+        
+        # elimino l'anno 2013 come consigliato
+        serie_totale = serie_totale[pd.date_range(start=pd.Timestamp('2014-01-01'), end=pd.Timestamp('2019-09-29'), freq='D')]
+        
         # tiriamo fuori il training set dell'80% sui dati
-        serie = serie_totale[pd.date_range(start=dataframe.index[0], end=serie_totale.index[int(len(serie_totale) * 0.8)], freq='D')]
+        serie = serie_totale[pd.date_range(start=pd.Timestamp('2014-01-01'), end=serie_totale.index[int(len(serie_totale) * 0.8)], freq='D')]
         
         # Eliminiamo il 29 Febbraio al fine di recuperare poi la componenete stagionale 
         serie = serie.drop(labels=[pd.Timestamp('2016-02-29')])
@@ -289,7 +293,383 @@ if __name__ == "__main__":
         plt.legend(loc='best');
         plt.show()
         
+        rolmean = residual.rolling(window=15).mean()
+        rolstd = residual.rolling(window=15).std()
+
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title('Studio residui con rolling window su media e dev. standard di %s'%column)
+        plt.plot(residual, label='Residui', color = 'black')
+        plt.plot(rolmean, color='orange', label='Rolling Mean',  linewidth=3)
+        plt.plot(rolstd, color='orange', label='Rolling Std', linestyle = '--',  linewidth=3)
+        plt.legend(loc='best');
+        plt.show()
         # %%
+        ts_trend = pd.Series(trend, copy=True)
+        ts_residuals = pd.Series(residual, copy=True)
+        
+        ts_trend.dropna(inplace=True)
+        ts_residuals.dropna(inplace=True)
+        
+        ts_trend_diff = ts_trend.diff()
+        ts_trend_diff.dropna(inplace=True)
+        
+        ts_residuals_diff = ts_residuals.diff()
+        ts_residuals_diff.dropna(inplace=True)
+        
+        plotAcf(ts_trend_diff, both=True, lags=10, title=column + " TREND differenziata")
+        plotAcf(ts_residuals_diff, both=True, lags=10, title=column + " RESIDUALS differenziata")
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< TREND >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+        # Definiamo dunque il modello ARIMA per TREND   
+        p,q = p_QForArima(ts_trend_diff, len(ts_trend_diff))        
+        model = ARIMA(ts_trend, order=(p, 1, q))
+        results_arima_TREND = model.fit(disp=-1)
+        arima_model_TREND = pd.Series(results_arima_TREND.fittedvalues, copy=True)
+        arima_model_TREND = arima_model_TREND.cumsum() + ts_trend[0]
+        
+        
+        # Plottamo grafico normale e arima_model
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title("TREND serie:" + column + ", ARIMA(" + str(p) + ',1,' + str(q) +')')
+        plt.plot(ts_trend, label=column+" TREND", color=COLOR_ORIG)
+        plt.plot(arima_model_TREND, label='Modello ARIMA(' + str(p) + ',1,' + str(q) +')', color=COLOR_MODEL)
+        plt.legend(loc='best');
+        plt.show()
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< TREND >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< RESIDUALS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        # Definiamo dunque il modello ARIMA per RESIDUALS
+        p,q = p_QForArima(ts_residuals_diff, len(ts_residuals_diff))        
+        model = ARIMA(ts_residuals, order=(p, 0, q))
+        results_arima_RESIDUALS = model.fit(disp=-1)
+        arima_model_RESIDUALS = pd.Series(results_arima_RESIDUALS.fittedvalues, copy=True)
+        
+        
+        # Plottamo grafico normale e arima_model
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title("RESIDUALS serie:" + column + ", ARIMA(" + str(p) + ',0,' + str(q) +')')
+        plt.plot(ts_residuals, label=column+" RESIDUALS", color=COLOR_ORIG)
+        plt.plot(arima_model_RESIDUALS, label='Modello ARIMA(' + str(p) + ',0,' + str(q) +')', color=COLOR_MODEL)
+        plt.legend(loc='best');
+        plt.show()
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< RESIDUALS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< TREND >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+        # Individuiamo il miglior modello ARIMA che approssima meglio IL TREND
+        best_p, best_q, best_result_model_TREND = find_best_model(ts_trend, d=1, max_p=5, max_q=5)
+        
+        # Mettiamo in confronto i due modelli
+        plt.figure(figsize=(40, 25), dpi=80)
+        plt.title('MIGLIOR MODELLO PER TREND: Modello ARIMA(' + str(best_p) + ',' + str(1) + ',' + str(best_q) +') di ' + column)
+        plt.plot(ts_trend, label=column, color=COLOR_ORIG)
+        
+        best_arima_model_TREND = pd.Series(best_result_model_TREND.fittedvalues, copy=True)
+        
+        
+        plt.plot(best_arima_model_TREND.cumsum() + ts_trend[0], label='Modello ARIMA(' + str(best_p) + ',' + str(1) + ',' + str(best_q) +')', color="steelblue")
+        plt.legend(loc='best');
+        plt.show()
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< TREND >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< RESIDUALS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        
+        # Individuiamo il miglior modello ARIMA che approssima meglio IL TREND
+        best_p, best_q, best_result_model_RESIDUALS = find_best_model(ts_residuals, d=0, max_p=5, max_q=5)
+        
+        # %%        
+        # Mettiamo in confronto i due modelli
+        plt.figure(figsize=(40, 25), dpi=80)
+        plt.title('MIGLIOR MODELLO PER RESIDUALS: Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +') di ' + column)
+        plt.plot(ts_residuals, label=column, color=COLOR_ORIG)
+        
+        best_arima_model_RESIDUALS = pd.Series(best_result_model_RESIDUALS.fittedvalues, copy=True)
+        
+
+        plt.plot(best_arima_model_RESIDUALS, label='Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')', color="steelblue")
+        plt.legend(loc='best');
+        plt.show()
+
+        #<<<<<<<<<<<<<<<<<<<<<<<<<<< RESIDUALS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        # %%
+        
+        ## <<<<<<<<<<<<<<<<<<<<  LISTA DATI OBBLIGATORI     >>>>>>>>>>>>>>>>>>>
+        
+        best_arima_model_con_stag = best_arima_model_TREND.cumsum() + ts_trend[0] + best_arima_model_RESIDUALS + seasonal
+        best_arima_model_con_stag.dropna(inplace=True)
+        
+        # DEVO RICORDARMI UNO SFASAMENTO A CAUSA DEL FATTO CHE USO INTERI COME INDICI        
+        sfasamento = int((len(seasonal) - len(best_arima_model_con_stag))/2)   
+        last_observation = best_arima_model_con_stag.index[len(best_arima_model_con_stag) - 1]        
+        
+        h = len(serie_totale) - len(seasonal)  # orizzonte  
+        new_h = h + sfasamento
+        
+        ## <<<<<<<<<<<<<<<<<<<<   FINE LISTA DATI OBBLIGATORI     >>>>>>>>>>>>>
+        
+        ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
+        previsione_TREND, _ ,intervallo_TREND = best_result_model_TREND.forecast(steps=new_h)
+        ts_TREND_forecast = pd.Series(previsione_TREND, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
+        ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
+        
+        ## <<<<<<<<<<<<<<<<<<<<     RESIDUALS     >>>>>>>>>>>>>>>>>>>
+        previsione_RESIDUALS, _ ,intervallo_RESIDUALS = best_result_model_RESIDUALS.forecast(steps=new_h)
+        ts_RESIDUALS_forecast = pd.Series(previsione_RESIDUALS, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
+        ## <<<<<<<<<<<<<<<<<<<<     RESIDUALS     >>>>>>>>>>>>>>>>>>>
+        
+        
+        
+        
+        ## <<<<<<<<<<<<<<<<<<<<     PREVISIONI TREND     >>>>>>>>>>>>>>>>>>>
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title("Previsioni del TREND di " + column)
+        plt.plot(ts_trend, color=COLOR_ORIG, label='Osservazioni reali')
+        plt.plot(best_arima_model_TREND.cumsum() + ts_trend[0], color=COLOR_MODEL, label='MODELLO ARIMA PER TREND')
+        
+        plt.plot(ts_TREND_forecast,color=COLOR_FOREC, label='Previsioni TREND')
+        
+        intervallo_sup = [0.0] * new_h
+        intervallo_inf = [0.0] * new_h
+        seasonal_interval_sum = [0.0] * new_h
+        
+        # Normalizzo gli array
+        ind = 0
+        for n in intervallo_TREND[:, [0]]:
+            intervallo_sup[ind] = float(n)
+            ind+=1
+        ind = 0
+        for n in intervallo_TREND[:, [1]]:
+            intervallo_inf[ind] = float(n)
+            ind+=1
+        
+        plt.fill_between(pd.date_range(start=last_observation, periods=new_h , freq='D'), 
+                         intervallo_sup, 
+                         intervallo_inf, 
+                         color=COLOR_ORIG, alpha=.25)
+        plt.legend(loc='best');
+        plt.show()
+        
+        ## <<<<<<<<<<<<<<<<<<<<     PREVISIONI TREND     >>>>>>>>>>>>>>>>>>>
+        
+        
+        ## <<<<<<<<<<<<<<<<<<<<     PREVISIONI RESIDUALS     >>>>>>>>>>>>>>>>>>>
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title("Previsioni del RESIDUALS di " + column)
+        plt.plot(ts_residuals, color=COLOR_ORIG, label='Osservazioni reali')
+        plt.plot(best_arima_model_RESIDUALS, color=COLOR_MODEL, label='MODELLO ARIMA PER RESIDUALS')
+        
+        plt.plot(ts_RESIDUALS_forecast,color=COLOR_FOREC, label='Previsioni RESIDUALS')
+        
+        # Normalizzo gli array
+        ind = 0
+        for n in intervallo_RESIDUALS[:, [0]]:
+            intervallo_sup[ind] = float(n)
+            ind+=1
+        ind = 0
+        for n in intervallo_RESIDUALS[:, [1]]:
+            intervallo_inf[ind] = float(n)
+            ind+=1
+        
+        plt.fill_between(pd.date_range(start=last_observation, periods=new_h , freq='D'), 
+                         intervallo_sup, 
+                         intervallo_inf, 
+                         color=COLOR_ORIG, alpha=.25)
+        plt.legend(loc='best');
+        plt.show()
+        
+        ## <<<<<<<<<<<<<<<<<<<<     PREVISIONI RESIDUALS     >>>>>>>>>>>>>>>>>>>
+
+        # %%
+        
+        # SOMMA COMPONENTI
+        serie_destagionata = trend + residual
+        serie_destagionata.dropna(inplace=True)
+        best_arima_model = best_arima_model_TREND.cumsum() + ts_trend[0] + best_arima_model_RESIDUALS
+        
+        
+        plt.figure(figsize=(40, 25), dpi=80)
+        plt.title('SOMMA MIGLIORI MODELLI COMPONENTE TREND E RESIDUALS DI ' + column)
+        plt.plot(serie_destagionata, label=column + " de-stagionata", color=COLOR_ORIG)
+
+        plt.plot(best_arima_model, label='SOMMA MIGLIORI MODELLI COMPONENTE', color="steelblue")
+        plt.legend(loc='best');
+        plt.show()
+        
+        
+        # %%
+        # Uniamo al miglior arima trovato la componente stagionale
+        best_arima_model_con_stag = best_arima_model + seasonal
+        best_arima_model_con_stag.dropna(inplace=True)
+        
+        '''
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.plot(serie[(best_arima_model_con_stag).index], label=column, color='black')
+        plt.plot(best_arima_model_con_stag,color='red', label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')')
+        plt.legend(loc='best');
+        plt.show()
+        '''
+        
+        # DEVO RICORDARMI UNO SFASAMENTO A CAUSA DEL FATTO CHE USO INTERI COME INDICI        
+        sfasamento = int((len(seasonal) - len(best_arima_model_con_stag))/2)   
+        
+        # FORECASTING
+        h = len(serie_totale) - len(seasonal)  # orizzonte        
+        last_observation = best_arima_model_con_stag.index[len(best_arima_model_con_stag) - 1]        
+        
+        ts_seasonal_forecast = pd.Series(seasonal[best_arima_model_con_stag.index], copy=True)
+        #ts_seasonal_forecast = ts_seasonal_forecast.add(seasonal[pd.date_range(start=last_observation, periods=h , freq='D')], fill_value=0)
+        
+        # Previsione sulla parte stagionale usando la parte stagionale "periodica"
+        ts_seasonal_forecast = pd.Series(seasonal[best_arima_model_con_stag.index], copy=True)
+        
+        # Devo calcolare le previsioni sulla componente stagionale
+        tmp = [0.0] * h                         # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+        start = len(ts_seasonal_forecast)       # rappresenta l'osservazione futura da prevedere
+        
+        for i in range(0, h): # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+            ind = start
+            #tmp[i] = seasonal[i - season]  # seasonal naif
+            
+            alpha = 0.97 # sommatoria in media exp
+            ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            tmp[i] += seasonal[sfasamento + ind]
+            exp = 1
+            while (ind >= 0):
+                tmp[i] += seasonal[sfasamento + ind] * ((1 - alpha) ** exp)
+                exp += 1
+                ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            
+            start += 1 # questo arriverà fino a t+h
+            tmp[i] = tmp[i]
+            
+        
+        ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=last_observation, periods=h , freq='D'))
+        ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)#seasonal[pd.date_range
+        
+        # ADESSO DEVO AGGIUNGERE UNA PARTE DI PREVISIONE SU SEASONAL_FORECAST
+        # CHE PARTE DAL SEASONAL E ARRIVA FINO ALLA PREVISIONE TOTALE SU SERIE_TOTALE
+        
+        tmp = [0.0] * sfasamento                         # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+        start = len(ts_seasonal_forecast)       # rappresenta l'osservazione futura da prevedere
+        
+        for i in range(0, sfasamento): # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+            ind = start
+            #tmp[i] = seasonal[i - season]  # seasonal naif
+            
+            alpha = 0.9 # sommatoria in media exp
+            ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            tmp[i] += ts_seasonal_forecast[ind]
+            exp = 1
+            while (ind >= 0):
+                tmp[i] += ts_seasonal_forecast[ind] * ((1 - alpha) ** exp)
+                exp += 1
+                ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            
+            start += 1 # questo arriverà fino a t+h
+            tmp[i] = tmp[i]
+            
+        
+        ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=ts_seasonal_forecast.index[len(ts_seasonal_forecast) - 1], periods=sfasamento, freq='D'))
+        ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)
+        
+        
+        # H con sfasamento
+        new_h = h + sfasamento
+        
+        # Previsioni sulla parte de-stagionata
+        
+        ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
+        previsione_TREND, _ ,intervallo_TREND = best_result_model_TREND.forecast(steps=new_h)        
+        ts_TREND_forecast = pd.Series(previsione_TREND, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
+        ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
+        
+        ## <<<<<<<<<<<<<<<<<<<<     RESIDUALS     >>>>>>>>>>>>>>>>>>>
+        previsione_RESIDUALS, _ ,intervallo_RESIDUALS = best_result_model_RESIDUALS.forecast(steps=new_h)
+        ts_RESIDUALS_forecast = pd.Series(previsione_RESIDUALS, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
+        ## <<<<<<<<<<<<<<<<<<<<     RESIDUALS     >>>>>>>>>>>>>>>>>>>
+
+        
+        plt.figure(figsize=(40, 20), dpi=80)
+        plt.title("Previsioni di " + column + " con la " + 'SOMMA DEI MIGLIORI Modelli ARIMA SULLE COMPONENTI')
+        plt.plot(serie_totale, color=COLOR_ORIG, label='Osservazioni reali')
+        plt.plot(best_arima_model_con_stag, color=COLOR_MODEL, label='SOMMA Modelli ARIMA')
+        
+        '''
+        [pd.date_range(
+            start=last_observation, 
+            periods=new_h, freq='D')]'''
+        
+        ts_forecast = ts_seasonal_forecast + ts_TREND_forecast + ts_RESIDUALS_forecast
+        plt.plot(ts_forecast,color=COLOR_FOREC, label='Previsioni')
+        
+        intervallo_sup = [0.0] * new_h
+        intervallo_inf = [0.0] * new_h
+        seasonal_interval_sum = [0.0] * new_h
+        
+        ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
+        
+        # Normalizzo gli array
+        ind = 0
+        for n in intervallo_TREND[:, [0]]:
+            intervallo_sup[ind] = float(n)
+            ind+=1
+        ind = 0
+        for n in intervallo_TREND[:, [1]]:
+            intervallo_inf[ind] = float(n)
+            ind+=1
+            
+        ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
+        
+        
+        ## <<<<<<<<<<<<<<<<<<<<     RESIDUALS     >>>>>>>>>>>>>>>>>>>
+        # Normalizzo gli array
+        ind = 0
+        for n in intervallo_RESIDUALS[:, [0]]:
+            intervallo_sup[ind] += float(n)
+            ind+=1
+        ind = 0
+        for n in intervallo_RESIDUALS[:, [1]]:
+            intervallo_inf[ind] += float(n)
+            ind+=1
+        ## <<<<<<<<<<<<<<<<<<<<     RESIDUALS     >>>>>>>>>>>>>>>>>>>   
+    
+
+        # Recupero i valori di ts_seasonal_forecast
+        ind = 0
+        for i in range(len(ts_seasonal_forecast) - new_h, len(ts_seasonal_forecast)):
+            seasonal_interval_sum[ind] = float(ts_seasonal_forecast[i])
+            ind+=1
+
+        # SOMMATORIA
+        for i in range(0, new_h):
+            intervallo_sup[i] += seasonal_interval_sum[i]
+        for i in range(0, new_h):
+            intervallo_inf[i] += seasonal_interval_sum[i]
+        
+        plt.fill_between(pd.date_range(start=last_observation, periods=new_h , freq='D'), 
+                         intervallo_sup, 
+                         intervallo_inf, 
+                         color=COLOR_ORIG, alpha=.25)
+        plt.legend(loc='best');
+        plt.show()
+        
+        errore = ts_forecast - serie_totale
+        errore.dropna(inplace=True)
+        
+        # SMAPE
+        sommaPrevOss = ts_forecast + serie_totale
+        sommaPrevOss.dropna(inplace=True)
+        
+        print(">>>>>> Calcoliamo MAE=%.4f"%(sum(abs(errore))/len(errore)))
+        print(">>>>>> Calcoliamo MSE=%.4f"%(sum(errore**2)/len(sommaPrevOss)))
+        
+        # %%
+        
+        '''# %%
         # Serie de stagionata
         serie_destagionata = trend + residual
         serie_destagionata.dropna(inplace=True)
@@ -297,7 +677,7 @@ if __name__ == "__main__":
         # Realizzazione ARIMA        
         serie_diff = serie_destagionata.diff()
         serie_diff.dropna(inplace=True)
-        plotAcf(serie_diff, both=True, lags=100, title=column)
+        plotAcf(serie_diff, both=True, lags=10, title=column + " differenziata")
         
         # Definiamo dunque il modello ARIMA    
         p,q = p_QForArima(serie_diff, len(serie_diff))        
@@ -329,7 +709,7 @@ if __name__ == "__main__":
         plt.plot(serie_destagionata, label=column, color=COLOR_ORIG)
         
         best_arima_model = pd.Series(best_result_model.fittedvalues, copy=True)
-        plt.plot(best_arima_model, label='Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')', color=COLOR_MODEL)
+        plt.plot(best_arima_model, label='Modello ARIMA(' + str(best_p) + ',' + str(0) + ',' + str(best_q) +')', color="steelblue")
         plt.legend(loc='best');
         plt.show()
         
@@ -338,13 +718,13 @@ if __name__ == "__main__":
         best_arima_model_con_stag = best_arima_model + seasonal
         best_arima_model_con_stag.dropna(inplace=True)
         
-        '''
-        plt.figure(figsize=(40, 20), dpi=80)
-        plt.plot(serie[(best_arima_model_con_stag).index], label=column, color='black')
-        plt.plot(best_arima_model_con_stag,color='red', label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')')
-        plt.legend(loc='best');
-        plt.show()
-        '''
+        
+#        plt.figure(figsize=(40, 20), dpi=80)
+#        plt.plot(serie[(best_arima_model_con_stag).index], label=column, color='black')
+#        plt.plot(best_arima_model_con_stag,color='red', label='Modello ARIMA(' + str(p) + ',' + str(0) + ',' + str(q) +')')
+#        plt.legend(loc='best');
+#        plt.show()
+        
         
         # DEVO RICORDARMI UNO SFASAMENTO A CAUSA DEL FATTO CHE USO INTERI COME INDICI        
         sfasamento = int((len(seasonal) - len(best_arima_model_con_stag))/2)   
@@ -424,10 +804,10 @@ if __name__ == "__main__":
         plt.plot(best_arima_model_con_stag, color=COLOR_MODEL, label='Modello ARIMA(' + str(best_p) + ',0,' + str(best_q) +')')
         
         
-        '''
-        [pd.date_range(
-            start=last_observation, 
-            periods=new_h, freq='D')]'''
+        
+#        [pd.date_range(
+#            start=last_observation, 
+ #           periods=new_h, freq='D')]
         
         ts_forecast = ts_seasonal_forecast + ts_NOseasonal_forecast
         plt.plot(ts_forecast,color=COLOR_FOREC, label='Previsioni')
@@ -472,5 +852,5 @@ if __name__ == "__main__":
         sommaPrevOss = ts_forecast + serie_totale
         sommaPrevOss.dropna(inplace=True)
         
-        print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
-        print("Calcoliamo sMAPE=%.4f"%(sum(200 * abs(errore) / sommaPrevOss)/len(sommaPrevOss)))
+        print(">>>>>> Calcoliamo MAE=%.4f"%(sum(abs(errore))/len(errore)))
+        print(">>>>>> Calcoliamo MSE=%.4f"%(sum(errore**2)/len(sommaPrevOss)))'''
