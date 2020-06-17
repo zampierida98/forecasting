@@ -144,7 +144,7 @@ print(restored2.head())
 #NUOVO! provo con sarimax per poter applicare una differenziazione "normale" e una con stagionalità
 
 sarima_model = SARIMAX(ts_log, order=(0, 1, 2), seasonal_order=(0, 1, 2, 7), enforce_invertibility=False, enforce_stationarity=False)
-sarima_fit = sarima_model.fit(disp=-1)
+sarima_fit = sarima_model.fit(disp = -1)
 
 sarima_pred = sarima_fit.get_prediction("2018-06-11", "2018-12-31")
 
