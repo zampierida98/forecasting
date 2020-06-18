@@ -583,7 +583,7 @@ if __name__ == "__main__":
         # Previsioni sulla parte de-stagionata
         
         ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
-        previsione_TREND, _ ,intervallo_TREND = best_result_model_TREND.forecast(steps=new_h)        
+        previsione_TREND, _ ,intervallo_TREND = best_result_model_TREND.forecast(steps=new_h)
         ts_TREND_forecast = pd.Series(previsione_TREND, index=pd.date_range(start=last_observation, periods=new_h, freq='D'))
         ## <<<<<<<<<<<<<<<<<<<<     TREND     >>>>>>>>>>>>>>>>>>>
         

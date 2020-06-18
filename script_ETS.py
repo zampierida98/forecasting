@@ -20,6 +20,15 @@ PROBLEMA:
     devono essere tutti positivi (e lo sono...)
 """
 
+
+"""
+RISPOSTE
+1 - Il simple exponential smoothing fa un forecast piatto ovvero Y_{t+h} = Y_{t+1} = l_t
+dove l_t è l'equazione che descrive il livello della serie. Quindi è normale
+che le previsioni siano una linea retta
+
+"""
+
 import datetime
 import pandas as pd
 import numpy as np
@@ -27,6 +36,9 @@ import matplotlib.pyplot as plt
 import datetime as dt
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 if __name__ == "__main__":
 
@@ -122,8 +134,9 @@ if __name__ == "__main__":
     
     forecasted = fitted.predict(start="2018-06-11", end="2019-09-29")
     
+    # Calcolo gli intervalli di predizione
     predint_xminus = ts[pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')]
-    predint_xplus = ts[pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')]
+    predint_xplus  = ts[pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')]
     
     z = 1.96
     sse = fitted.sse
@@ -149,9 +162,14 @@ if __name__ == "__main__":
     
     #EXPONENTIAL SMOOTHING
     
+    # Questa parte serve per vedere se può essere moltiplicativo.
+    # Però si eseguono divisioni con 0 quindi va messo: train[i] == 0
+    # e train[i] = 1
+    
+    '''
     for i in range(1, len(train)):
-        if train[i] < 0:
-            train[i] = 0
+        if train[i] == 0:
+            train[i] = 1'''
     
     # Provare a cambiare i parametri per un migliore risultato...
     
@@ -208,4 +226,71 @@ if __name__ == "__main__":
 
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
 
+    
+    # %%
+    # Proviamo a usare ets in maniera scomposta sulle componenti e poi
+    # sommare i risultati.
+    #
+    # NOTA: qua sommare i residual è di poco conto.
+    
+    decomposition = seasonal_decompose(train, period=year, two_sided=False)
+    
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+    
+    trend.dropna(inplace=True)
+    seasonal.dropna(inplace=True)
+    residual.dropna(inplace=True)
 
+    # Creiamo dei modelli per trend e seasonal + USO ARIMA PER I RESIDUAL VISTO CHE SONO UNA COMPONENTE STAZION.
+    trend_model = ExponentialSmoothing(trend, trend="add", damped = True, seasonal=None)
+    seasonal_model = ExponentialSmoothing(seasonal, trend=None, seasonal='add', seasonal_periods=year)
+    # ARIMA SU RESIDUAL (PER FORZA)
+    residual_model = ARIMA(residual, order=(1, 0, 6))
+    
+    # fit model
+    trend_fitted    = trend_model.fit()
+    seasonal_fitted = seasonal_model.fit()
+    residual_fitted = residual_model.fit()
+    
+    # make prediction. Stesso periodo del validation set!    
+    trend_model_predictions = trend_fitted.forecast(steps = int(len(valid)))
+    seasonal_model_predictions = seasonal_fitted.forecast(steps = int(len(valid)))
+    residual_model_predictions, _, _ = residual_fitted.forecast(steps = int(len(valid)))
+
+    #Sommo i modelli
+    model_predictions = trend_model_predictions \
+                        + seasonal_model_predictions \
+                        + residual_model_predictions
+                        
+    model_predictions.dropna(inplace=True)
+    
+    # annulliamo i valori negativi    
+    for i in range(1, len(model_predictions)):
+        if model_predictions[i] < 0:
+            model_predictions[i] = 0
+        
+    z = 1.96
+    sse = trend_fitted.sse + seasonal_fitted.sse
+    for i in range(1, len(model_predictions)):
+        predint_xminus[i] = model_predictions[i] - z * np.sqrt(sse/len(valid)+i)
+        predint_xplus[i]  = model_predictions[i] + z * np.sqrt(sse/len(valid)+i)
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(train, label="training set", color=TSC)
+    plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
+    plt.plot(trend_fitted.fittedvalues + 
+             seasonal_fitted.fittedvalues + 
+             residual_fitted.fittedvalues, label="Exponential Smoothing", color=MRC)
+    plt.plot(model_predictions, label="Forecasts (in sample)", color=FC)
+    plt.plot(predint_xminus, color="grey", alpha = .5)
+    plt.plot(predint_xplus, color="grey", alpha = .5)
+    plt.fill_between(pd.date_range(start="2018-06-11", periods=len(valid) , freq='D'), 
+                 predint_xplus, 
+                 predint_xminus, 
+                 color='grey', alpha=.25)
+    plt.legend(loc='best')
+    plt.plot()
+
+    
