@@ -14,10 +14,9 @@ source: https://machinelearningmastery.com/exponential-smoothing-for-time-series
 
 PROBLEMA:
 1 - Penso che sia normale per il simple exponential smoothing avere come predizione una linea retta.
-2 - Bisogna aggiungere gli intervalli di confidenza per le previsioni.
-3 - Exponential smoothing ha una "discesa anomala". Ho provato a risolvere sommando il risultato del
+2 - Exponential smoothing ha una "discesa anomala". Ho provato a risolvere sommando il risultato del
     simple exponential smoothing ma non è soddisfacente.
-4 - Non funzionano le varianti con "multiplicative" invece di "additive" perchè i valori della serie
+3 - Non funzionano le varianti con "multiplicative" invece di "additive" perchè i valori della serie
     devono essere tutti positivi (e lo sono...)
 """
 
@@ -116,24 +115,37 @@ if __name__ == "__main__":
     
     # fit model
     
-    modelv1_results = modelv1.fit()
+    fitted = modelv1.fit()
     
     # make prediction. Stesso periodo del validation set!
     
-    modelv1_predictions = modelv1_results.forecast(steps = int(len(valid)))
+    #forecasted = fitted.forecast(steps = int(len(valid)))
     
-    #model_predictions = model_results.predict(start="2018-06-11", end="2019-09-29")
+    forecasted = fitted.predict(start="2018-06-11", end="2019-09-29")
+    
+    z = 1.96
+    sse = fitted.sse
+    for i in range(1, len(valid)):
+        predint_xminus[i] = forecasted[i] - z * np.sqrt(sse/len(valid)+i)
+        predint_xplus[i]  = forecasted[i] + z * np.sqrt(sse/len(valid)+i)
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label="training set", color=TSC)
     plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
-    plt.plot(modelv1_results.fittedvalues, label="Simple Exponential Smoothing", color=MRC)
-    plt.plot(modelv1_predictions, label="Forecasts (in sample)", color=FC)
+    plt.plot(fitted.fittedvalues, label="Simple Exponential Smoothing", color=MRC)
+    plt.plot(forecasted, label="Forecasts (in sample)", color=FC)
+    plt.plot(predint_xminus, color="grey", alpha = .5)
+    plt.plot(predint_xplus, color="grey", alpha = .5)
+    plt.fill_between(pd.date_range(start="2018-06-11", periods=len(valid) , freq='D'), 
+                 predint_xplus, 
+                 predint_xminus, 
+                 color='grey', alpha=.25)
     plt.legend(loc='best')
     plt.plot()
     
-    #%%
     
+    #%%
+    """
     #EXPONENTIAL SMOOTHING
     
     for i in range(1, len(train)):
@@ -175,10 +187,10 @@ if __name__ == "__main__":
     plt.plot(model_predictions, label="Forecasts (in sample)", color=FC)
     plt.legend(loc='best')
     plt.plot()
-    
+    """
     #%%
     
-    errore = model_predictions - valid
+    errore = forecasted - valid
     errore.dropna(inplace=True)
 
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))

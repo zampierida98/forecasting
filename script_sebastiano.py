@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
 import mytools as mt
+import pmdarima as pm
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.arima_model import ARIMA
 
@@ -88,8 +89,44 @@ plt.title(label = "Serie iniziale (maglie vendute)")
 #Grafici di autocorrelazione e autocorrelazione parziale
 #mt.ac_pac_function(ts)
 plt.title(label = "Serie iniziale (maglie vendute)")
+#%%
+import pmdarima as pm
 
+# Seasonal - fit stepwise auto-ARIMA
+smodel = pm.auto_arima(train, start_p=1, start_q=1,
+                         test='adf',
+                         max_p=3, max_q=3, m=12,
+                         start_P=0, seasonal=True,
+                         d=None, D=1, trace=True,
+                         error_action='ignore',  
+                         suppress_warnings=True, 
+                         stepwise=True)
 
+smodel.summary()
+
+#%%
+# Forecast
+n_periods = 12
+fitted, confint = smodel.predict(n_periods=n_periods, return_conf_int=True)
+index_of_fc = pd.date_range(train.index[-1], periods = n_periods, freq='MS')
+
+# make series for plotting purpose
+fitted_series = pd.Series(fitted, index=index_of_fc)
+lower_series = pd.Series(confint[:, 0], index=index_of_fc)
+upper_series = pd.Series(confint[:, 1], index=index_of_fc)
+
+# Plot
+plt.plot(train)
+plt.plot(fitted_series, color='darkgreen')
+plt.fill_between(lower_series.index, 
+                 lower_series, 
+                 upper_series, 
+                 color='k', alpha=.15)
+
+plt.title("SARIMA - Final Forecast")
+plt.show()
+
+"""
 #%%
 #ts è la serie con il tale di capi venduti + 1 per giorno da cui è stato tolto il 29 febbraio 2016
 #ts_log = np.log(ts)
@@ -110,7 +147,12 @@ mt.test_stationarity(ts_log_diff2, season_2, True)
 mt.kpss_test(ts_log_diff2)
 mt.ac_pac_function(ts_log_diff2)
 
-"""
+#%%
+
+#weekly_cumulative_sum = ts_log_diff2.rolling(window=7).sum()
+#weekly_cumulative_sum.dropna(inplace = True)
+
+
 #Controllo funzionamento
 print("\nts_log:")
 print(ts_log.head())
@@ -142,7 +184,7 @@ print(restored2.head())
 """
 #%%
 #NUOVO! provo con sarimax per poter applicare una differenziazione "normale" e una con stagionalità
-
+"""
 sarima_model = SARIMAX(ts_log, order=(4, 1, 3), seasonal_order=(2, 0, 2, 7))#, enforce_invertibility=False, enforce_stationarity=False)
 sarima_fit = sarima_model.fit(disp = -1)
 
@@ -156,7 +198,7 @@ plt.plot(sarima_fit.fittedvalues, color='green', label='SARIMAX model')
 plt.plot(sarima_pred, color="red", label='SARIMAX predictions')
 plt.title("Sarima (%d, 1, %d) x (%d, 1, %d, %d)" %(0, 2, 0, 2, season_2))
 plt.legend(loc='best')
-
+"""
 #%%
 """
 mt.ac_pac_function(ts_log_diff2)
