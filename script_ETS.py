@@ -294,3 +294,8 @@ if __name__ == "__main__":
     plt.plot()
 
     
+    errore = model_predictions - valid
+    errore.dropna(inplace=True)
+
+    print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
+    
