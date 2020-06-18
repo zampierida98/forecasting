@@ -106,7 +106,6 @@ if __name__ == "__main__":
     plt.plot()
     """
     #%%
-    
     #SIMPLE EXPONENTIAL SMOOTHING... risultato non soddisfacente
     
     # create class
@@ -122,6 +121,9 @@ if __name__ == "__main__":
     #forecasted = fitted.forecast(steps = int(len(valid)))
     
     forecasted = fitted.predict(start="2018-06-11", end="2019-09-29")
+    
+    predint_xminus = ts[pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')]
+    predint_xplus = ts[pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')]
     
     z = 1.96
     sse = fitted.sse
@@ -143,9 +145,8 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     plt.plot()
     
-    
     #%%
-    """
+    
     #EXPONENTIAL SMOOTHING
     
     for i in range(1, len(train)):
@@ -158,15 +159,15 @@ if __name__ == "__main__":
     
     # fit model
     
-    model_results = model.fit()
+    fitted = model.fit()
     
     # make prediction. Stesso periodo del validation set!
     
-    model_predictions = model_results.forecast(steps = int(len(valid)))
+    model_predictions = fitted.forecast(steps = int(len(valid)))
     
     #aggiungo il risultato del simple exponential smoothing (perchè funziona meglio???)
     
-    model_predictions = model_predictions + modelv1_predictions
+    model_predictions = model_predictions + forecasted
     
     # tolgo i valori negativi
     
@@ -174,20 +175,32 @@ if __name__ == "__main__":
         if model_predictions[i] < 0:
             model_predictions[i] = 0
             
-    for i in range(1, len(model_results.fittedvalues)):
-        if model_results.fittedvalues[i] < 0:
-            model_results.fittedvalues[i] = 0
+    for i in range(1, len(fitted.fittedvalues)):
+        if fitted.fittedvalues[i] < 0:
+            fitted.fittedvalues[i] = 0
+            
+    z = 1.96
+    sse = fitted.sse
+    for i in range(1, len(valid)):
+        predint_xminus[i] = model_predictions[i] - z * np.sqrt(sse/len(valid)+i)
+        predint_xplus[i]  = model_predictions[i] + z * np.sqrt(sse/len(valid)+i)
     
     #model_predictions = model_results.predict(start="2018-06-11", end="2019-09-29")
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label="training set", color=TSC)
     plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
-    plt.plot(model_results.fittedvalues, label="Simple Exponential Smoothing", color=MRC)
+    plt.plot(fitted.fittedvalues, label="Exponential Smoothing", color=MRC)
     plt.plot(model_predictions, label="Forecasts (in sample)", color=FC)
+    plt.plot(predint_xminus, color="grey", alpha = .5)
+    plt.plot(predint_xplus, color="grey", alpha = .5)
+    plt.fill_between(pd.date_range(start="2018-06-11", periods=len(valid) , freq='D'), 
+                 predint_xplus, 
+                 predint_xminus, 
+                 color='grey', alpha=.25)
     plt.legend(loc='best')
     plt.plot()
-    """
+
     #%%
     
     errore = forecasted - valid
