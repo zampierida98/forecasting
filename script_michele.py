@@ -407,7 +407,7 @@ if __name__ == "__main__":
         last_observation = best_arima_model_con_stag.index[len(best_arima_model_con_stag) - 1]        
         
         h = len(serie_totale) - len(seasonal)  # orizzonte  
-        new_h = h + sfasamento
+        new_h = h + sfasamento + 100
         
         ## <<<<<<<<<<<<<<<<<<<<   FINE LISTA DATI OBBLIGATORI     >>>>>>>>>>>>>
         
@@ -513,8 +513,9 @@ if __name__ == "__main__":
         plt.show()
         '''
         
-        # DEVO RICORDARMI UNO SFASAMENTO A CAUSA DEL FATTO CHE USO INTERI COME INDICI        
-        sfasamento = int((len(seasonal) - len(best_arima_model_con_stag))/2)   
+        # DEVO RICORDARMI UNO SFASAMENTO A CAUSA DEL FATTO CHE USO INTERI COME INDICI + 100 per l'out-bound-sample
+        
+        sfasamento = int((len(seasonal) - len(best_arima_model_con_stag))/2)
         
         # FORECASTING
         h = len(serie_totale) - len(seasonal)  # orizzonte        
@@ -560,7 +561,7 @@ if __name__ == "__main__":
             ind = start
             #tmp[i] = seasonal[i - season]  # seasonal naif
             
-            alpha = 0.9 # sommatoria in media exp
+            alpha = 0.97 # sommatoria in media exp
             ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
             tmp[i] += ts_seasonal_forecast[ind]
             exp = 1
@@ -577,8 +578,30 @@ if __name__ == "__main__":
         ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)
         
         
+        tmp = [0.0] * 100                       # conterrà i valori di previsione stagionale, dati dalla media dei valori dello stesso periodo
+        start = len(ts_seasonal_forecast)       # rappresenta l'osservazione futura da prevedere
+        
+        for i in range(0, 100): # 0 sarebbe t+1 e arriva a t+1+h-1=t+h
+            ind = start
+            #tmp[i] = seasonal[i - season]  # seasonal naif
+            
+            alpha = 0.97 # sommatoria in media exp
+            ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            tmp[i] += ts_seasonal_forecast[ind]
+            exp = 1
+            while (ind >= 0):
+                tmp[i] += ts_seasonal_forecast[ind] * ((1 - alpha) ** exp)
+                exp += 1
+                ind -= season # prima il decremento perchè non abbiamo il valore di t+1 
+            
+            start += 1 # questo arriverà fino a t+h
+            tmp[i] = tmp[i]
+
+        ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=ts_seasonal_forecast.index[len(ts_seasonal_forecast) - 1], periods=100, freq='D'))
+        ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)
+        
         # H con sfasamento
-        new_h = h + sfasamento
+        new_h = h + sfasamento + 100
         
         # Previsioni sulla parte de-stagionata
         
