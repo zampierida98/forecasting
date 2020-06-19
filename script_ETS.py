@@ -12,18 +12,9 @@ Prima bisogna eseguire l'intero programma per poter leggere il file con i dati (
 
 source: https://machinelearningmastery.com/exponential-smoothing-for-time-series-forecasting-in-python/
 
-PROBLEMA:
-1 - Penso che sia normale per il simple exponential smoothing avere come predizione una linea retta.
-2 - Exponential smoothing ha una "discesa anomala". Ho provato a risolvere sommando il risultato del
-    simple exponential smoothing ma non è soddisfacente.
-3 - Non funzionano le varianti con "multiplicative" invece di "additive" perchè i valori della serie
-    devono essere tutti positivi (e lo sono...)
-"""
-
-
-"""
-RISPOSTE
-1 - Il simple exponential smoothing fa un forecast piatto ovvero Y_{t+h} = Y_{t+1} = l_t
+Exponential smoothing ha una "discesa anomala". Ho provato a risolvere sommando il risultato del 
+simple exponential smoothing ma non è soddisfacente.
+Il simple exponential smoothing fa un forecast piatto ovvero Y_{t+h} = Y_{t+1} = l_t
 dove l_t è l'equazione che descrive il livello della serie. Quindi è normale
 che le previsioni siano una linea retta
 
@@ -36,6 +27,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from sklearn.metrics import mean_squared_error
 
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -158,6 +150,13 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     plt.plot()
     
+    errore = forecasted - valid
+    errore.dropna(inplace=True)
+    
+    mse = mean_squared_error(valid, forecasted)
+    print('MSE: %f' % mse)
+    print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
+    
     #%%
     
     #EXPONENTIAL SMOOTHING
@@ -218,12 +217,12 @@ if __name__ == "__main__":
                  color='grey', alpha=.25)
     plt.legend(loc='best')
     plt.plot()
-
-    #%%
     
-    errore = forecasted - valid
+    errore = model_predictions - valid
     errore.dropna(inplace=True)
-
+    
+    mse = mean_squared_error(valid, model_predictions)
+    print('MSE: %f' % mse)
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
 
     
@@ -297,5 +296,7 @@ if __name__ == "__main__":
     errore = model_predictions - valid
     errore.dropna(inplace=True)
 
+    mse = mean_squared_error(valid, model_predictions)
+    print('MSE: %f' % mse)
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
     
