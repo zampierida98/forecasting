@@ -122,7 +122,7 @@ def acf_pacf(timeseries):
 # ==================================SARIMAX==================================
 def sarimax_statsmodels(timeseries, train_length, m):
     """
-    Verifica dell'accuratezza di un modello SARIMAX
+    Realizzazione di un modello SARIMAX (con le funzioni di statsmodels)
 
     Parameters
     ----------
@@ -139,10 +139,11 @@ def sarimax_statsmodels(timeseries, train_length, m):
 
     """
     # spezzo la serie temporale
-    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
+    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq='D')]
 
     # realizzo il modello
-    model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True)
+    model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True,
+                          start_p=1, start_q=1, max_p=2, max_q=2, start_P=1, start_Q=1, max_P=2, max_Q=2)
     print(model.summary())
     
     # controllo la sua bontà
@@ -156,12 +157,20 @@ def sarimax_statsmodels(timeseries, train_length, m):
     sarimax_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
     sarimax_ts = pd.Series(sarimax_mod.predicted_mean, index=sarimax_dates)
     
+    # grafico del modello ricavato
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Modello SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
+    ax = train.plot(label='Train set', color='black')
+    sarimax_ts.plot(ax=ax, label='In-sample predictions', color='green')
+    plt.legend()
+    plt.show()
+    
     # out-of-sample forecasts
     # https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.get_forecast.html
     fcast = model.arima_res_.get_forecast(steps=len(timeseries)-len(train))
     fcast_ci = fcast.conf_int()
     
-    fcast_dates = pd.date_range(start=timeseries.index[int(len(timeseries) * train_length)+1], periods=len(timeseries)-len(train), freq='D')
+    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
     ts_fcast = pd.Series(fcast.predicted_mean, index=fcast_dates)
     ts_ci_min = pd.Series(fcast_ci[:, 0], index=fcast_dates)
     ts_ci_max = pd.Series(fcast_ci[:, 1], index=fcast_dates)
@@ -170,7 +179,6 @@ def sarimax_statsmodels(timeseries, train_length, m):
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Forecasting con SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
     ax = timeseries.plot(label='Observed', color='black')
-    sarimax_ts.plot(ax=ax, label='SARIMAX{}x{} model'.format(model.order, model.seasonal_order), color='green')
     ts_fcast.plot(ax=ax, label='Out-of-sample forecasts', alpha=.7, color='red')
     ax.fill_between(fcast_dates,
                     ts_ci_min,
@@ -181,14 +189,13 @@ def sarimax_statsmodels(timeseries, train_length, m):
     # calcolo MAE e MSE
     errore = ts_fcast - timeseries
     errore.dropna(inplace=True)
-    
-    print("MSE=%.4f"%(errore ** 2).mean())
-    print("MAE=%.4f"%(abs(errore)).mean())
+    print('MSE=%.4f'%(errore ** 2).mean())
+    print('MAE=%.4f'%(abs(errore)).mean())
 
 
 def sarimax_pmdarima(timeseries, train_length, m):
     """
-    Verifica dell'accuratezza di un modello SARIMAX
+    Realizzazione di un modello SARIMAX (con le funzioni di pmdarima)
 
     Parameters
     ----------
@@ -208,7 +215,8 @@ def sarimax_pmdarima(timeseries, train_length, m):
     train, test = model_selection.train_test_split(timeseries, train_size=train_length)
 
     # realizzo il modello
-    model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True)
+    model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True,
+                          start_p=1, start_q=1, max_p=2, max_q=2, start_P=1, start_Q=1, max_P=2, max_Q=2)
     print(model.summary())
     
     # ricavo il modello (predizioni in-sample)
@@ -217,20 +225,29 @@ def sarimax_pmdarima(timeseries, train_length, m):
     sarimax_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
     sarimax_ts = pd.Series(preds, index=sarimax_dates)
     
+    # grafico del modello ricavato
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Modello SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
+    ax = train.plot(label='Train set', color='black')
+    sarimax_ts.plot(ax=ax, label='In-sample predictions', color='green')
+    plt.legend()
+    plt.show()
+    
     # out-of-sample forecasts
     # http://alkaline-ml.com/pmdarima/modules/generated/pmdarima.arima.ARIMA.html#pmdarima.arima.ARIMA.predict
     fcast, conf_int = model.predict(n_periods=test.shape[0], return_conf_int=True)
     
-    fcast_dates = pd.date_range(start=timeseries.index[int(len(timeseries) * train_length)], periods=len(timeseries)-len(train), freq='D')
+    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
     ts_fcast = pd.Series(fcast, index=fcast_dates)
     ts_ci_min = pd.Series(conf_int[:, 0], index=fcast_dates)
     ts_ci_max = pd.Series(conf_int[:, 1], index=fcast_dates)
+    
+    print('Test RMSE: %.4f'%np.sqrt(mean_squared_error(test, fcast)))
     
     # grafico delle previsioni out-of-sample in sovrapposizione con i dati di test
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Forecasting con SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
     ax = timeseries.plot(label='Observed', color='black')
-    sarimax_ts.plot(ax=ax, label='SARIMAX{}x{} model'.format(model.order, model.seasonal_order), color='green')
     ts_fcast.plot(ax=ax, label='Out-of-sample forecasts', alpha=.7, color='red')
     ax.fill_between(fcast_dates,
                     ts_ci_min,
@@ -238,12 +255,91 @@ def sarimax_pmdarima(timeseries, train_length, m):
     plt.legend()
     plt.show()
     
-    # calcolo RMSE
-    print("Test RMSE: %.3f" % np.sqrt(mean_squared_error(test, fcast)))
+    # calcolo MAE e MSE
+    errore = ts_fcast - timeseries
+    errore.dropna(inplace=True)
+    print('MSE=%.4f'%(errore ** 2).mean())
+    print('MAE=%.4f'%(abs(errore)).mean())
 
 
 # ===================================TBATS===================================
-def tbats_forecasting(timeseries, h, s):
+def tbats_model(timeseries, train_length, s, slow=True):
+    """
+    Estimazione di un modello TBATS
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
+    s : list
+        l'array delle stagionalità
+    slow : bool
+        se False velocizza il processo di estimazione (di default è True)
+
+    Returns
+    -------
+    None.
+
+    """
+    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq='D')]
+
+    # fit the model
+    if slow:
+        estimator_slow = TBATS(seasonal_periods=s)
+        model = estimator_slow.fit(train)
+    else:
+        estimator = TBATS(
+            seasonal_periods=s,
+            use_arma_errors=False,  # shall try only models without ARMA
+            use_box_cox=False       # will not use Box-Cox
+        )
+        model = estimator.fit(train)
+    
+    # summarize fitted model
+    print(model.summary())
+    
+    # in sample prediction
+    preds = model.y_hat
+    tbats_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
+    tbats_ts = pd.Series(preds, index=tbats_dates)
+    
+    # out-of-sample forecasts
+    fcast, conf_int = model.forecast(steps=len(timeseries)-len(train), confidence_level=0.95)
+    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
+    ts_fcast = pd.Series(fcast, index=fcast_dates)
+    ts_ci_min = pd.Series(conf_int['lower_bound'], index=fcast_dates)
+    ts_ci_max = pd.Series(conf_int['upper_bound'], index=fcast_dates)
+    
+    # model plot
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Modello TBATS per {}'.format(timeseries.name))
+    ax = train.plot(label='Train set', color='black')
+    tbats_ts.plot(ax=ax, label='In-sample predictions', color='green')
+    plt.legend()
+    plt.show()
+    print('MAE (in sample)', np.mean(np.abs(model.resid)))
+    
+    # forecasts plot
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Forecasting con TBATS per {}'.format(timeseries.name))
+    ax = timeseries.plot(label='Observed', color='black')
+    ts_fcast.plot(ax=ax, label='Out-of-sample forecasts', alpha=.7, color='red')
+    ax.fill_between(fcast_dates,
+                    ts_ci_min,
+                    ts_ci_max, color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # MAE/MSE
+    errore = ts_fcast - timeseries
+    errore.dropna(inplace=True)
+    print('MSE=%.4f'%(errore ** 2).mean())
+    print('MAE=%.4f'%(abs(errore)).mean())
+
+
+def tbats_forecasting(timeseries, h, s, slow=True):
     """
     Forecasting con TBATS
 
@@ -255,79 +351,47 @@ def tbats_forecasting(timeseries, h, s):
         l'orizzonte
     s : list
         l'array delle stagionalità
-
-    Returns
-    -------
-    NumPy array
-        i valori predetti
-
-    """
-    # fit the model
-    estimator = TBATS(
-        seasonal_periods=s,
-        use_arma_errors=False,  # shall try only models without ARMA
-        use_box_cox=False       # will not use Box-Cox
-    )
-    model = estimator.fit(timeseries)
-    
-    # fit the model (slow)
-    #estimator_slow = TBATS(seasonal_periods=s)
-    #model = estimator_slow.fit(timeseries)
-    
-    # summarize fitted model
-    print(model.summary())
-    
-    y_forecasted, confidence_info = model.forecast(steps=h, confidence_level=0.95)
-    
-    return (y_forecasted, confidence_info)
-
-
-def accuracy_tbats(timeseries, train_length):
-    """
-    Verifica dell'accuratezza di un modello TBATS
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    train_length : int
-        la lunghezza del set di train (in rapporto alla serie completa)
+    slow : bool
+        se False velocizza il processo di estimazione (di default è True)
 
     Returns
     -------
     None.
 
     """
-    # spezzo la serie temporale
-    train = timeseries[pd.date_range(start=data.index[0], end=timeseries.index[int(len(timeseries) * train_length)], freq='D')]
-
-    # forecasting con TBATS:
-    (forecast, forecast_ci) = tbats_forecasting(train, len(ts)-len(train), [7, 365.25])
+    # fit the model
+    if slow:
+        estimator_slow = TBATS(seasonal_periods=s)
+        model = estimator_slow.fit(timeseries)
+    else:
+        estimator = TBATS(
+            seasonal_periods=s,
+            use_arma_errors=False,  # shall try only models without ARMA
+            use_box_cox=False       # will not use Box-Cox
+        )
+        model = estimator.fit(timeseries)
     
-    # calcolo la serie temporale dei valori predetti:
-    future_dates = pd.date_range(start=ts.index[len(train)], periods=len(timeseries)-len(train), freq='D')
-    future_series = pd.Series(data=forecast, index=future_dates)
-    ci_min = pd.Series(forecast_ci['lower_bound'], index=future_dates)
-    ci_max = pd.Series(forecast_ci['upper_bound'], index=future_dates)
+    # summarize fitted model
+    print(model.summary())
     
-    # grafico dei valori predetti in sovrapposizione con quelli del set di test
+    # forecasts
+    fcast, conf_int = model.forecast(steps=h, confidence_level=0.95)
+    fcast_dates = pd.date_range(start=timeseries.index[len(timeseries)-1], periods=h+1, freq='D')
+    fcast_dates = fcast_dates[1:]
+    ts_fcast = pd.Series(fcast, index=fcast_dates)
+    ts_ci_min = pd.Series(conf_int['lower_bound'], index=fcast_dates)
+    ts_ci_max = pd.Series(conf_int['upper_bound'], index=fcast_dates)
+    
+    # forecasts plot
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Forecasting con TBATS per {}'.format(timeseries.name))
     ax = timeseries.plot(label='Observed', color='black')
-    future_series.plot(ax=ax, label='Forecast', alpha=.7, color='red')
-    ax.fill_between(future_dates, ci_min, ci_max, color='k', alpha=.2)
+    ts_fcast.plot(ax=ax, label='{} forecasted values'.format(h), alpha=.7, color='red')
+    ax.fill_between(fcast_dates,
+                    ts_ci_min,
+                    ts_ci_max, color='k', alpha=.2)
     plt.legend()
     plt.show()
-    
-    # calcolo MSE
-    se = future_series - timeseries
-    se.dropna(inplace=True)
-    print("MSE=%.4f"%(se ** 2).mean())
-    
-    # calcolo MAE
-    test = timeseries[pd.date_range(start=train.index[len(train)-1], end=timeseries.index[len(timeseries)-1], freq='D')]
-    test = test[1:]
-    print("MAE=%.4f"%np.mean(np.abs(forecast - test)))
 
 
 # TODO========================================================================
@@ -483,7 +547,7 @@ if __name__ == '__main__':
     # stazionarietà:
     test_stationarity(ts) # the test statistic is smaller than the 1% critical values so we can say with 99% confidence that ts is stationary
     
-    # %% Stagionalità
+    # %% Stagionalità     
     decomposition = seasonal_decompose(ts, period=365)
     trend = decomposition.trend
     seasonal = decomposition.seasonal
@@ -500,10 +564,10 @@ if __name__ == '__main__':
     seas_adj.name = ts.name
     
     # %% SARIMAX (ignoro la stagionalità annuale)
-    sarimax_statsmodels(ts, 0.8, 7)
+    #sarimax_statsmodels(ts, 0.8, 7)
     sarimax_pmdarima(ts, 0.8, 7)
     
     # %% TBATS
-    # controllo l'accuratezza delle previsioni di TBATS confrontandole con la serie stessa:
-    accuracy_tbats(ts, 0.8)
+    tbats_model(ts, 0.8, [7, 365.25], slow=False)
+    tbats_forecasting(ts, 100, [7, 365.25], slow=False)
     
