@@ -213,8 +213,13 @@ def sarimax_statsmodels(timeseries, train_length, o, so):
     None.
 
     """
+    if so[3] == 52:
+        f = 'W-MON'
+    else:
+        f = 'D'
+    
     # spezzo la serie temporale
-    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq='D')]
+    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq=f)]
 
     # realizzo il modello
     model = smt.SARIMAX(train, order=o, seasonal_order=so, trend='c').fit()
@@ -230,7 +235,7 @@ def sarimax_statsmodels(timeseries, train_length, o, so):
     # ricavo il modello (predizioni in-sample)
     # https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.get_prediction.html
     sarimax_mod = model.get_prediction(end=len(train)-1, dynamic=False)
-    sarimax_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
+    sarimax_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq=f)
     sarimax_ts = pd.Series(sarimax_mod.predicted_mean, index=sarimax_dates)
     
     # grafico del modello ricavato
@@ -246,7 +251,7 @@ def sarimax_statsmodels(timeseries, train_length, o, so):
     fcast = model.get_forecast(steps=len(timeseries)-len(train))
     fcast_ci = fcast.conf_int()
     
-    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
+    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq=f)
     ts_fcast = pd.Series(fcast.predicted_mean, index=fcast_dates)
     
     # grafico delle previsioni out-of-sample in sovrapposizione con i dati di test
@@ -288,7 +293,12 @@ def tbats_model(timeseries, train_length, s, slow=True):
     None.
 
     """
-    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq='D')]
+    if s.count(52) == 1:
+        f = 'W-MON'
+    else:
+        f = 'D'
+    
+    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq=f)]
 
     # fit the model
     if slow:
@@ -307,12 +317,12 @@ def tbats_model(timeseries, train_length, s, slow=True):
     
     # in sample prediction (model.y_hat = train - model.resid)
     preds = model.y_hat
-    tbats_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
+    tbats_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq=f)
     tbats_ts = pd.Series(preds, index=tbats_dates)
     
     # out-of-sample forecasts
     fcast, conf_int = model.forecast(steps=len(timeseries)-len(train), confidence_level=0.95)
-    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
+    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq=f)
     ts_fcast = pd.Series(fcast, index=fcast_dates)
     ts_ci_min = pd.Series(conf_int['lower_bound'], index=fcast_dates)
     ts_ci_max = pd.Series(conf_int['upper_bound'], index=fcast_dates)
@@ -572,17 +582,17 @@ if __name__ == '__main__':
     (o, so) = sarimax_pmdarima(ts, 0.8, 7) # ignoro la stagionalità annuale
     
     # provo con m=365:
-    new_so = []
+    new_so = tuple()
     for i in range(0,len(so)-1):
-        new_so.append(so[i])
-    new_so.append(365)
+        new_so += (so[i],)
+    new_so += (365,)
     
-    sarimax_statsmodels(ts, 0.8, o, new_so)
+    #sarimax_statsmodels(ts, 0.8, o, new_so) # errore di memoria
     
     # %% TBATS
     tbats_model(ts, 0.8, [7, 365.25], slow=False)
     tbats_forecasting(ts, 100, [7, 365.25], slow=False)
-    
+       
     # %% Aggregazione settimanale dei dati tramite media
     # serie aggiustata togliendo le settimane incomplete all'inizio e alla fine:
     adj_ts = ts[2:] # 25-03-2013 è lunedì, 29-09-2019 è domenica
@@ -596,8 +606,19 @@ if __name__ == '__main__':
         new_data.append(somma/7)
         
     new_ts = pd.Series(data=new_data, index=new_dates)
-
-
+    new_ts.name = ts.name + ' (aggregazione settimanale)'
+    
+    new_so = tuple()
+    for i in range(0,len(so)-1):
+        new_so += (so[i],)
+    new_so += (52,)
+    
+    # sarimax 52:
+    sarimax_statsmodels(new_ts, 0.8, o, new_so)
+    
+    # tbats 52:
+    tbats_model(new_ts, 0.8, [52], slow=False)
+    
 # %% ==================================DEBUG==================================
 timeseries = ts
 train_length = 0.8
