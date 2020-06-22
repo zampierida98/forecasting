@@ -10,6 +10,7 @@ import pandas as pd
 import pmdarima as pm
 from pmdarima import model_selection
 from sklearn.metrics import mean_squared_error
+import statsmodels.tsa.api as smt
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller, acf, pacf
 from tbats import TBATS
@@ -120,79 +121,6 @@ def acf_pacf(timeseries):
 
 
 # ==================================SARIMAX==================================
-def sarimax_statsmodels(timeseries, train_length, m):
-    """
-    Realizzazione di un modello SARIMAX (con le funzioni di statsmodels)
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    train_length : int
-        la lunghezza del set di train (in rapporto alla serie completa)
-    m : int
-        stagionalità
-    
-    Returns
-    -------
-    None.
-
-    """
-    # spezzo la serie temporale
-    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq='D')]
-
-    # realizzo il modello
-    model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True,
-                          start_p=1, start_q=1, max_p=2, max_q=2, start_P=1, start_Q=1, max_P=2, max_Q=2)
-    print(model.summary())
-    
-    # controllo la sua bontà
-    plt.figure(figsize=(40, 20), dpi=80)
-    model.plot_diagnostics(figsize=(40, 20))
-    plt.show()
-    
-    # ricavo il modello (predizioni in-sample)
-    # https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.get_prediction.html
-    sarimax_mod = model.arima_res_.get_prediction(end=len(train)-1, dynamic=False)
-    sarimax_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
-    sarimax_ts = pd.Series(sarimax_mod.predicted_mean, index=sarimax_dates)
-    
-    # grafico del modello ricavato
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title('Modello SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
-    ax = train.plot(label='Train set', color='black')
-    sarimax_ts.plot(ax=ax, label='In-sample predictions', color='green')
-    plt.legend()
-    plt.show()
-    
-    # out-of-sample forecasts
-    # https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.get_forecast.html
-    fcast = model.arima_res_.get_forecast(steps=len(timeseries)-len(train))
-    fcast_ci = fcast.conf_int()
-    
-    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
-    ts_fcast = pd.Series(fcast.predicted_mean, index=fcast_dates)
-    ts_ci_min = pd.Series(fcast_ci[:, 0], index=fcast_dates)
-    ts_ci_max = pd.Series(fcast_ci[:, 1], index=fcast_dates)
-    
-    # grafico delle previsioni out-of-sample in sovrapposizione con i dati di test
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title('Forecasting con SARIMAX{}x{} per {}'.format(model.order, model.seasonal_order, timeseries.name))
-    ax = timeseries.plot(label='Observed', color='black')
-    ts_fcast.plot(ax=ax, label='Out-of-sample forecasts', alpha=.7, color='red')
-    ax.fill_between(fcast_dates,
-                    ts_ci_min,
-                    ts_ci_max, color='k', alpha=.2)
-    plt.legend()
-    plt.show()
-    
-    # calcolo MAE e MSE
-    errore = ts_fcast - timeseries
-    errore.dropna(inplace=True)
-    print('MSE=%.4f'%(errore ** 2).mean())
-    print('MAE=%.4f'%(abs(errore)).mean())
-
-
 def sarimax_pmdarima(timeseries, train_length, m):
     """
     Realizzazione di un modello SARIMAX (con le funzioni di pmdarima)
@@ -208,7 +136,8 @@ def sarimax_pmdarima(timeseries, train_length, m):
     
     Returns
     -------
-    None.
+    tuple
+        (order, seasonal_order)
 
     """
     # spezzo la serie temporale
@@ -260,6 +189,82 @@ def sarimax_pmdarima(timeseries, train_length, m):
     errore.dropna(inplace=True)
     print('MSE=%.4f'%(errore ** 2).mean())
     print('MAE=%.4f'%(abs(errore)).mean())
+    
+    return (model.order, model.seasonal_order)
+
+
+def sarimax_statsmodels(timeseries, train_length, o, so):
+    """
+    Realizzazione di un modello SARIMAX (con le funzioni di statsmodels)
+
+    Parameters
+    ----------
+    timeseries : Series
+        la serie temporale
+    train_length : int
+        la lunghezza del set di train (in rapporto alla serie completa)
+    o : iterable
+        order del modello SARIMAX
+    so : iterable
+        seasonal_order del modello SARIMAX
+    
+    Returns
+    -------
+    None.
+
+    """
+    # spezzo la serie temporale
+    train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq='D')]
+
+    # realizzo il modello
+    model = smt.SARIMAX(train, order=o, seasonal_order=so, trend='c').fit()
+    #model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True,
+                          #start_p=1, start_q=1, max_p=1, max_q=1, start_P=1, start_Q=1, max_P=1, max_Q=1)
+    print(model.summary())
+    
+    # controllo la sua bontà
+    plt.figure(figsize=(40, 20), dpi=80)
+    model.plot_diagnostics(figsize=(40, 20))
+    plt.show()
+    
+    # ricavo il modello (predizioni in-sample)
+    # https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.get_prediction.html
+    sarimax_mod = model.get_prediction(end=len(train)-1, dynamic=False)
+    sarimax_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
+    sarimax_ts = pd.Series(sarimax_mod.predicted_mean, index=sarimax_dates)
+    
+    # grafico del modello ricavato
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Modello SARIMAX{}x{} per {}'.format(o, so, timeseries.name))
+    ax = train.plot(label='Train set', color='black')
+    sarimax_ts.plot(ax=ax, label='In-sample predictions', color='green')
+    plt.legend()
+    plt.show()
+    
+    # out-of-sample forecasts
+    # https://www.statsmodels.org/stable/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.get_forecast.html
+    fcast = model.get_forecast(steps=len(timeseries)-len(train))
+    fcast_ci = fcast.conf_int()
+    
+    fcast_dates = pd.date_range(start=timeseries.index[len(train)], periods=len(timeseries)-len(train), freq='D')
+    ts_fcast = pd.Series(fcast.predicted_mean, index=fcast_dates)
+    
+    # grafico delle previsioni out-of-sample in sovrapposizione con i dati di test
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Forecasting con SARIMAX{}x{} per {}'.format(o, so, timeseries.name))
+    ax = timeseries.plot(label='Observed', color='black')
+    ts_fcast.plot(ax=ax, label='Out-of-sample forecasts', alpha=.7, color='red')
+    ax.fill_between(fcast_dates,
+                    fcast_ci['lower '+timeseries.name],
+                    fcast_ci['upper '+timeseries.name], color='k', alpha=.2)
+    plt.legend()
+    plt.show()
+    
+    # calcolo MAE e MSE
+    errore = ts_fcast - timeseries
+    errore.dropna(inplace=True)
+    print('MSE=%.4f'%(errore ** 2).mean())
+    print('MAE=%.4f'%(abs(errore)).mean())
 
 
 # ===================================TBATS===================================
@@ -300,7 +305,7 @@ def tbats_model(timeseries, train_length, s, slow=True):
     # summarize fitted model
     print(model.summary())
     
-    # in sample prediction
+    # in sample prediction (model.y_hat = train - model.resid)
     preds = model.y_hat
     tbats_dates = pd.date_range(start=timeseries.index[0], end=timeseries.index[len(train)-1], freq='D')
     tbats_ts = pd.Series(preds, index=tbats_dates)
@@ -563,11 +568,40 @@ if __name__ == '__main__':
     seas_adj.dropna(inplace=True)
     seas_adj.name = ts.name
     
-    # %% SARIMAX (ignoro la stagionalità annuale)
-    #sarimax_statsmodels(ts, 0.8, 7)
-    sarimax_pmdarima(ts, 0.8, 7)
+    # %% SARIMAX
+    (o, so) = sarimax_pmdarima(ts, 0.8, 7) # ignoro la stagionalità annuale
+    
+    # provo con m=365:
+    new_so = []
+    for i in range(0,len(so)-1):
+        new_so.append(so[i])
+    new_so.append(365)
+    
+    sarimax_statsmodels(ts, 0.8, o, new_so)
     
     # %% TBATS
     tbats_model(ts, 0.8, [7, 365.25], slow=False)
     tbats_forecasting(ts, 100, [7, 365.25], slow=False)
     
+    # %% Aggregazione settimanale dei dati tramite media
+    # serie aggiustata togliendo le settimane incomplete all'inizio e alla fine:
+    adj_ts = ts[2:] # 25-03-2013 è lunedì, 29-09-2019 è domenica
+    new_dates = pd.date_range(start=adj_ts.index[0], periods=len(adj_ts)/7, freq='W-MON')
+    new_data = []
+    
+    for week in range(0, len(adj_ts), 7):
+        somma = 0
+        for day in range(0,7):
+            somma += adj_ts[week+day]
+        new_data.append(somma/7)
+        
+    new_ts = pd.Series(data=new_data, index=new_dates)
+
+
+# %% ==================================DEBUG==================================
+timeseries = ts
+train_length = 0.8
+m = 365
+s = [7, 365.25]
+h = 100
+slow=False
