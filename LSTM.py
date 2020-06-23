@@ -3,6 +3,10 @@
 Created on Fri Jun 19 11:35:21 2020
 
 @author: seba3
+
+IMPORTANTE!!!!
+Per installare tensorflow usare pip3!!!
+!pip3 install tensorflow
 """
 
 import datetime
