@@ -139,7 +139,7 @@ plt.plot(train, label = "Training set", color = 'black')
 plt.plot(valid, label = "Validation set", color = "black", linestyle = "--")
 plt.plot(sarima_fit.fittedvalues, color='green', label='SARIMAX model')
 plt.plot(sarima_pred, color="red", label='SARIMAX predictions')
-plt.title("Sarima (3,0,2)x(1,1,2,7)")
+plt.title("Sarimax (3,0,2)x(1,1,2,7)")
 plt.fill_between(pd.date_range(start="2018-06-11", periods=len(valid) , freq='D'), 
                  predint_xplus, 
                  predint_xminus, 
