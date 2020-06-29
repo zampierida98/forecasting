@@ -590,8 +590,8 @@ if __name__ == '__main__':
     #sarimax_statsmodels(ts, 0.8, o, new_so) # errore di memoria
     
     # %% TBATS
-    tbats_model(ts, 0.8, [7, 365.25], slow=False)
-    tbats_forecasting(ts, 100, [7, 365.25], slow=False)
+    tbats_model(ts, 0.8, [7, 365.25, 182.625], slow=False)
+    tbats_forecasting(ts, 100, [7, 365.25, 182.625], slow=False)
        
     # %% Aggregazione settimanale dei dati tramite media
     # serie aggiustata togliendo le settimane incomplete all'inizio e alla fine:
@@ -617,7 +617,7 @@ if __name__ == '__main__':
     sarimax_statsmodels(new_ts, 0.8, o, new_so)
     
     # tbats 52:
-    tbats_model(new_ts, 0.8, [52], slow=False)
+    tbats_model(new_ts, 0.8, [52, 26], slow=False)
     
 # %% ==================================DEBUG==================================
 timeseries = ts
@@ -626,3 +626,5 @@ m = 365
 s = [7, 365.25]
 h = 100
 slow=False
+o = (1,0,2)
+so = (1,0,1,7)
