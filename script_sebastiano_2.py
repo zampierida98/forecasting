@@ -9,11 +9,13 @@ Per installare tensorflow usare pip3!!!
 !pip3 install tensorflow
 """
 
+import numpy as np
 import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 import mytools as mt
 import datetime as dt
+from statsmodels.tsa.arima_model import ARIMA
 
 if __name__ == "__main__":
 
@@ -81,6 +83,8 @@ if __name__ == "__main__":
     rolmean = ts.rolling(window=year).mean()
     rolstd = ts.rolling(window=year).std()
     
+    # Plot della serie iniziale con rolling mean e rolling std (365 giorni e 182 giorni)
+    
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 365 giorni)')
     plt.ylabel('#Maglie vendute')
@@ -109,3 +113,72 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     plt.show(block=False)
     plt.plot()
+    
+    #%%
+    
+    # Calcolo la serie differenziata con finestra di 7 giorni e ne traccio i grafici di
+    # autocorrelazione e di autocorrelazione parziale. Leggendo i grafici ricavo
+    # p=4 e q=6
+    
+    my_ts = train.diff(periods=7)  
+    my_ts.dropna(inplace = True)
+    mt.ac_pac_function(my_ts)
+    
+    p, q = 6, 4
+
+    # calcolo la componente stagionale che mi servirà per tornare nella forma iniziale
+
+    my_stagionalita = train.rolling(window=7).mean()
+    
+    model = ARIMA(my_ts, order=(p, 0, q))
+    results_ARIMA = model.fit(disp=0)
+    
+    my_arima = pd.Series(results_ARIMA.fittedvalues, copy=True)
+    original_scale = my_arima + my_stagionalita
+    
+    # sistemo alcuni "errori del modello". Livello a 0 tutto ciò che scende
+    # sotto (non ci possono essere "vendite negative")
+    
+    for i in range(1, len(original_scale)):
+        if original_scale[i] < 0:
+            original_scale[i] = 0
+            
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(train, label = "Training set", color = 'black')
+    plt.plot(original_scale, color='green', label='ARIMA')
+    plt.title("Arima (%d, 1, %d)"% (p, q))
+    plt.legend(loc='best');
+    
+    #%%
+    
+    predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
+    predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
+    predictions.dropna(inplace=True)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(train, label='training set', color = 'black')
+    plt.plot(valid, color='black', label='validation set', linestyle = '--')
+    plt.plot(original_scale, color = 'green', label = 'risultati di ARIMA')
+    
+    forecast = predictions+ts.rolling(window=7).mean()
+    forecast.dropna(inplace = True)
+
+    for i in range(1, len(forecast)):
+        if forecast[i] < 0:
+            forecast[i] = 0
+     
+    ci = 1.96 * np.std(forecast)/np.mean(forecast)
+    plt.plot(forecast, color="red", label='previsione con ARIMA')
+    plt.title('Previsioni con ARIMA(4,1,3)')
+    plt.xlabel('Data')
+    plt.ylabel('#Maglie vendute')
+    plt.legend(loc='best')
+    print(predictions.head())
+
+#%%
+
+    errore = forecast - valid
+    errore.dropna(inplace=True)
+    
+    print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
+
+    
