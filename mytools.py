@@ -223,7 +223,7 @@ def decompose(timeseries):
     ts_decompose.dropna(inplace=True)
     return ts_decompose
 
-def ac_pac_function(timeseries, pos1=0, pos2=0):
+def ac_pac_function(timeseries, pos1=0, pos2=0, lags=20):
     
     """
     Calcola le funzioni di autocorrelazione e autocorrelazione parziale di una serie temporale.
@@ -233,10 +233,11 @@ def ac_pac_function(timeseries, pos1=0, pos2=0):
         timeseries -> la serie temporale resa stazionaria con un metodo qualsiasi (dataframe)\n
         pos1 -> [OPZIONALE] posizione primo subplot (intero riga/colonna/cella max 9 celle)\n
         pos2 -> [OPZIONALE] posizione secondo subplot (intero riga/colonna/cella max 9 celle)\n
+        lags -> [OPZIONALE] dimensione del grafico (intero)\n
     """
     
-    lag_acf = acf(timeseries, nlags=20)
-    lag_pacf = pacf(timeseries, nlags=20, method='ols')
+    lag_acf = acf(timeseries, nlags=lags)
+    lag_pacf = pacf(timeseries, nlags=lags, method='ols')
     
     if pos1==0 and pos2==0:
         plt.figure(figsize=(40, 20), dpi=80)

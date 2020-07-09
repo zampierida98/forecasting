@@ -85,6 +85,8 @@ if __name__ == "__main__":
     
     # Plot della serie iniziale con rolling mean e rolling std (365 giorni e 182 giorni)
     
+    # ANNO
+    
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 365 giorni)')
     plt.ylabel('#Maglie vendute')
@@ -99,11 +101,30 @@ if __name__ == "__main__":
     
     #train_diff = train.diff(periods = 182)
     
+    # META' ANNO
+    
     rolmean = ts.rolling(window=half_year).mean()
     rolstd = ts.rolling(window=half_year).std()
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 182 giorni)')
+    plt.ylabel('#Maglie vendute')
+    plt.xlabel('Data')
+    plt.plot(train, label="training set", color=TSC)
+    plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
+    plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
+    plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
+    plt.legend(loc='best')
+    plt.show(block=False)
+    plt.plot()
+    
+    # SETTIMANA
+    
+    rolmean = ts.rolling(window=week).mean()
+    rolstd = ts.rolling(window=week).std()
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 7 giorni)')
     plt.ylabel('#Maglie vendute')
     plt.xlabel('Data')
     plt.plot(train, label="training set", color=TSC)
@@ -122,7 +143,9 @@ if __name__ == "__main__":
     
     my_ts = train.diff(periods=7)  
     my_ts.dropna(inplace = True)
-    mt.ac_pac_function(my_ts)
+    mt.ac_pac_function(my_ts, lags = 100)
+    
+    #%%
     
     p, q = 6, 4
 
@@ -132,6 +155,8 @@ if __name__ == "__main__":
     
     model = ARIMA(my_ts, order=(p, 0, q))
     results_ARIMA = model.fit(disp=0)
+    
+    # Torno alla forma iniziale aggiungendo la componente stagionale
     
     my_arima = pd.Series(results_ARIMA.fittedvalues, copy=True)
     original_scale = my_arima + my_stagionalita
@@ -143,6 +168,15 @@ if __name__ == "__main__":
         if original_scale[i] < 0:
             original_scale[i] = 0
             
+    # Calcolo le previsioni (per un periodo come valid, con cui fare il confronto
+    # per determinarne la bontà)
+
+    predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
+    predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
+    predictions.dropna(inplace=True)
+    
+    # Plot del modello ARIMA con la serie per il training
+    
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label = "Training set", color = 'black')
     plt.plot(original_scale, color='green', label='ARIMA')
@@ -151,15 +185,12 @@ if __name__ == "__main__":
     
     #%%
     
-    predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
-    predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
-    predictions.dropna(inplace=True)
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label='training set', color = 'black')
     plt.plot(valid, color='black', label='validation set', linestyle = '--')
     plt.plot(original_scale, color = 'green', label = 'risultati di ARIMA')
     
-    forecast = predictions+ts.rolling(window=7).mean()
+    forecast = predictions+ts.rolling(window=week).mean()
     forecast.dropna(inplace = True)
 
     for i in range(1, len(forecast)):
