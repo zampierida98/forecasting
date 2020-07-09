@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import mytools as mt
 import datetime as dt
 from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 if __name__ == "__main__":
 
@@ -135,6 +136,13 @@ if __name__ == "__main__":
     plt.show(block=False)
     plt.plot()
     
+    # Traccio i grafici ACF e PACF per evidenziare come sia presente una stagionalità
+    # con periodo settimanale
+    
+    result = seasonal_decompose(ts)
+    mt.ac_pac_function(result.seasonal, lags = 50)
+    mt.ac_pac_function(ts, lags = 50)
+    
     #%%
     
     # Calcolo la serie differenziata con finestra di 7 giorni e ne traccio i grafici di
@@ -144,9 +152,6 @@ if __name__ == "__main__":
     my_ts = train.diff(periods=7)  
     my_ts.dropna(inplace = True)
     mt.ac_pac_function(my_ts, lags = 100)
-    
-    #%%
-    
     p, q = 6, 4
 
     # calcolo la componente stagionale che mi servirà per tornare nella forma iniziale
