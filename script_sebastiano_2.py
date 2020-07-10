@@ -204,7 +204,7 @@ if __name__ == "__main__":
      
     ci = 1.96 * np.std(forecast)/np.mean(forecast)
     plt.plot(forecast, color="red", label='previsione con ARIMA')
-    plt.title('Previsioni con ARIMA(4,1,3)')
+    plt.title('Previsioni con ARIMA('+str(p)+',1,'+str(q)+')')
     plt.xlabel('Data')
     plt.ylabel('#Maglie vendute')
     plt.legend(loc='best')
