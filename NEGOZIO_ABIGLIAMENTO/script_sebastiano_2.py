@@ -67,6 +67,11 @@ if __name__ == "__main__":
     # usiamo solo la serie maglie. Il procedimento si può ripetere con ciascun capo...
     
     ts = data['MAGLIE'] 
+    
+    # Costanti per spezzare la serie temporale sempre nello stesso punto
+    
+    END_TRAIN = ts.index[int(len(ts) * 0.8)]
+    START_VALID = ts.index[int(len(ts)*0.8)+1]
         
     # Se si vuole togliere il 29 febbraio 2016 per avere solo anni di 365 giorni. 
     # Sconsigliato se si considera una stagionalità settimanale in quanto sfalsa di un giorno.
@@ -99,8 +104,6 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     plt.show(block=False)
     plt.plot()
-    
-    #train_diff = train.diff(periods = 182)
     
     # META' ANNO
     
@@ -197,24 +200,50 @@ if __name__ == "__main__":
 
     predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
     predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
-    predictions.dropna(inplace=True)
+    predictions.dropna(inplace=True) 
     
-    # Plot del modello ARIMA con la serie per il training
+    # Plot del modello ARIMA con la serie per il training differenziata
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(my_ts, label = "Training set", color = 'black')
+    plt.plot(my_arima, color='green', label='ARIMA')
+    plt.plot(predictions, color='red', label='previsioni')
+    plt.title("Arima (%d, 0, %d)"% (p, q))
+    plt.legend(loc='best');
+    
+    # Plot del modello ARIMA con la serie per il training in scala originale
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label = "Training set", color = 'black')
     plt.plot(original_scale, color='green', label='ARIMA')
-    plt.title("Arima (%d, 1, %d)"% (p, q))
+    plt.title("Arima (%d, 0, %d)"% (p, q))
     plt.legend(loc='best');
     
-    #%%
+    # Traccio il grafico delle previsioni in scala originale
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label='training set', color = 'black')
     plt.plot(valid, color='black', label='validation set', linestyle = '--')
     plt.plot(original_scale, color = 'green', label = 'risultati di ARIMA')
     
-    forecast = predictions+ts.rolling(window=week).mean()
+    #%%
+    
+    # Per ottenere le previsioni in scala originale devo aggiungere la componente stagionale
+    # (settimanale) che posso ottenere con una media esponenziale o un "approccio naive" ossia
+    # prendendo la stagionalità di k osservazioni passate
+    
+    """forecast = predictions+ts.rolling(window=week).mean()"""
+    
+    seasonal_factor = pd.Series.copy(valid)
+    for i in range(0, len(valid)):
+        seasonal_factor[i] = train[len(train)-1]
+        
+    seasonal_factor.dropna(inplace=True)
+        
+    forecast =pd.Series.copy(predictions)    
+    for i in range(0, len(valid)):
+        forecast[i] += seasonal_factor[i]
+                                       
     forecast.dropna(inplace = True)
 
     for i in range(1, len(forecast)):
@@ -223,7 +252,7 @@ if __name__ == "__main__":
      
     ci = 1.96 * np.std(forecast)/np.mean(forecast)
     plt.plot(forecast, color="red", label='previsione con ARIMA')
-    plt.title('Previsioni con ARIMA('+str(p)+',1,'+str(q)+')')
+    plt.title('Previsioni con ARIMA('+str(p)+',0,'+str(q)+')')
     plt.xlabel('Data')
     plt.ylabel('#Maglie vendute')
     plt.legend(loc='best')
