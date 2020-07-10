@@ -145,14 +145,33 @@ if __name__ == "__main__":
     
     #%%
     
-    # Calcolo la serie differenziata con finestra di 7 giorni e ne traccio i grafici di
-    # autocorrelazione e di autocorrelazione parziale. Leggendo i grafici ricavo
-    # p=4 e q=6
+    # Calcolo la serie differenziata con finestra di 7 giorni e ne traccio il grafico
+    # per vedere se c'è stato un miglioramento nella stazionarietà della serie
     
     my_ts = train.diff(periods=7)  
     my_ts.dropna(inplace = True)
+    
+    rolmean = my_ts.rolling(window=week).mean()
+    rolstd = my_ts.rolling(window=week).std()
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Moving average e std del train set differenziato')
+    plt.ylabel('#Maglie vendute')
+    plt.xlabel('Data')
+    plt.plot(my_ts, label="training set", color=TSC)
+    plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=2)
+    plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=2)
+    plt.legend(loc='best')
+    plt.show(block=False)
+    plt.plot()
+    
+    # Traccio il grafico delle funzioni di correlazione e autocorrelazione parziale per
+    # estrarre i pesi p e q da usare nel modello arima
+    
     mt.ac_pac_function(my_ts, lags = 100)
-    p, q = 6, 4
+    p, q = 4, 6
+
+    #%%
 
     # calcolo la componente stagionale che mi servirà per tornare nella forma iniziale
 
