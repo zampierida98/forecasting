@@ -179,6 +179,7 @@ if __name__ == "__main__":
     # calcolo la componente stagionale che mi servirà per tornare nella forma iniziale
 
     my_stagionalita = train.rolling(window=7).mean()
+    my_stagionalita.dropna(inplace= True)
     
     model = ARIMA(my_ts, order=(p, 0, q))
     results_ARIMA = model.fit(disp=0)
