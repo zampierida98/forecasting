@@ -39,14 +39,15 @@ def load_data(filename, indexData=False):
     return dataframe
 
 if __name__ == '__main__':
+    """
     print('Caricamento calendar.csv ...')
     calendar = load_data('./M5_COMPETITION/calendar.csv', indexData=True)
     
     print('Caricamento sell_prices.csv ...')
     sell_prices = load_data('./M5_COMPETITION/sell_prices.csv')
     
-    print('Caricamento sales_train_evaluation.csv ...', end=' ')
-    sales_train = load_data('./M5_COMPETITION/sales_train_evaluation.csv')
+    print('Caricamento sales_train_validation.csv ...', end=' ')
+    sales_train = load_data('./M5_COMPETITION/sales_train_validation.csv')
     
     print('Caricamento completato')
     
@@ -56,3 +57,20 @@ if __name__ == '__main__':
     # df1.merge(df2, left_on='lkey', right_on='rkey')
     # sales_train.merge(sell_prices, left_on='item_id', right_on='item_id')
     print(sales_train.head(5))
+    """
+    
+    print('Caricamento sales_train_validation.csv ...')
+    sales_train = load_data('./datasets/sales_train_validation.csv')
+    
+    # %%
+    hobby = sales_train[sales_train['cat_id'] == 'HOBBIES']
+    household = sales_train[sales_train['cat_id'] == 'HOUSEHOLD']
+    food = sales_train[sales_train['cat_id'] == 'FOODS']
+    
+    print('Head sales_train')
+    print(len(sales_train))
+    
+    print('Head hobby')
+    print(len(hobby) + len(household) + len(food))
+    
+    
