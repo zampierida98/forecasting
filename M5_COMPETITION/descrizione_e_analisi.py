@@ -29,4 +29,8 @@ Ci viene richiesto di prevedere i prossimi 28 giorni
 Il periodo [d_1 - d_1913] rappresenta il train set
 Il periodo [d_1914 - d_1941] rappresenta il validation set
 Il periodo [d_1942 - d_1969] rappresenta il set di valutazione
+
+Nei set di dati sono presenti periodi in cui un prodotto non è disponibile -> di conseguenza le vendite
+restano a 0
+
 """
