@@ -39,38 +39,34 @@ def load_data(filename, indexData=False):
     return dataframe
 
 if __name__ == '__main__':
-    """
-    print('Caricamento calendar.csv ...')
-    calendar = load_data('./M5_COMPETITION/calendar.csv', indexData=True)
-    
-    print('Caricamento sell_prices.csv ...')
-    sell_prices = load_data('./M5_COMPETITION/sell_prices.csv')
-    
     print('Caricamento sales_train_validation.csv ...', end=' ')
-    sales_train = load_data('./M5_COMPETITION/sales_train_validation.csv')
-    
-    print('Caricamento completato')
-    
-    # %%
-    print('Eseguo il join dei dataframe')    
-    print(sales_train.head(5))
-    # df1.merge(df2, left_on='lkey', right_on='rkey')
-    # sales_train.merge(sell_prices, left_on='item_id', right_on='item_id')
-    print(sales_train.head(5))
-    """
-    
-    print('Caricamento sales_train_validation.csv ...')
     sales_train = load_data('./datasets/sales_train_validation.csv')
+    print('Carimento completato')
     
     # %%
+    print('Creazione serie temporali (ancora dataframe) ...', end=' ')
+    
     hobby = sales_train[sales_train['cat_id'] == 'HOBBIES']
     household = sales_train[sales_train['cat_id'] == 'HOUSEHOLD']
     food = sales_train[sales_train['cat_id'] == 'FOODS']
     
-    print('Head sales_train')
-    print(len(sales_train))
+    stateCA = sales_train[sales_train['state_id'] == 'CA']
+    stateTX = sales_train[sales_train['state_id'] == 'TX']
+    stateWI = sales_train[sales_train['state_id'] == 'WI']
     
-    print('Head hobby')
-    print(len(hobby) + len(household) + len(food))
+    shopCA1 = sales_train[sales_train['store_id'] == 'CA_1']
+    shopCA2 = sales_train[sales_train['store_id'] == 'CA_2']
+    shopCA3 = sales_train[sales_train['store_id'] == 'CA_3']
+    shopCA4 = sales_train[sales_train['store_id'] == 'CA_4']
+    
+    shopTX1 = sales_train[sales_train['store_id'] == 'TX_1']
+    shopTX2 = sales_train[sales_train['store_id'] == 'TX_2']
+    shopTX3 = sales_train[sales_train['store_id'] == 'TX_3']
+    
+    shopWI1 = sales_train[sales_train['store_id'] == 'WI_1']
+    shopWI2 = sales_train[sales_train['store_id'] == 'WI_2']
+    shopWI3 = sales_train[sales_train['store_id'] == 'WI_3']
+    
+    print('Creazione completata')
     
     
