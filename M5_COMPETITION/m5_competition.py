@@ -21,6 +21,7 @@ COLOR_ORIG = 'black'
 COLOR_MODEL = 'green'
 COLOR_FOREC = 'red'
 COLOR_ACF = 'blue'
+COLORPALETTE = ['red', 'yellow', 'blue', 'green', 'purple', 'orange', 'black']
  
 plt.rc('font', size=MEDIUM_SIZE)         # controls default text sizes 
 plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
@@ -29,6 +30,21 @@ plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize 
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+#fornire timeserie e rispettiva etichetta in ordine!
+def plot(timeseries = [], labels = [], titolo=''):
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title(str(titolo))
+    plt.ylabel('Vendite')
+    plt.xlabel('Data')
+    i=0
+    for serie in timeseries:
+        plt.plot(serie, label = str(labels[i]), color = COLORPALETTE[i])
+        i += 1
+    plt.legend(loc='best')
+    plt.show(block=False)
+    return 
+
 
 def load_data(filename, indexData=False):
     if indexData:        
@@ -43,7 +59,7 @@ if __name__ == '__main__':
     sales_train = load_data('./datasets/sales_train_validation.csv')
     print('Carimento completato')
     
-    # %%
+    #%%
     print('Creazione serie temporali (ancora dataframe) ...', end=' ')
     
     hobby = sales_train[sales_train['cat_id'] == 'HOBBIES']
@@ -68,5 +84,9 @@ if __name__ == '__main__':
     shopWI3 = sales_train[sales_train['store_id'] == 'WI_3']
     
     print('Creazione completata')
+    
+    #%% 
+    #Plot delle serie ottenute per verificare "influenze intrinseche". Bisogna creare le serie temporali per poter utilizzare la funzione plot
+    #plot([stateCA, stateTX, stateWI], ['California', 'Texas', 'Wisconsin'], 'Vendite per stato')
     
     
