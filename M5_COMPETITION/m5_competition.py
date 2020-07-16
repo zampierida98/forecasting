@@ -21,7 +21,7 @@ COLOR_ORIG = 'black'
 COLOR_MODEL = 'green'
 COLOR_FOREC = 'red'
 COLOR_ACF = 'blue'
-COLORPALETTE = ['red', 'yellow', 'blue', 'green', 'purple', 'orange', 'black']
+COLORPALETTE = ['red', 'gold', 'blue', 'green', 'purple', 'orange', 'black', 'lime', 'cyan', 'peru', 'gray']
  
 plt.rc('font', size=MEDIUM_SIZE)         # controls default text sizes 
 plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
@@ -32,8 +32,9 @@ plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 #fornire timeserie e rispettiva etichetta in ordine!
+# %%
 def plot(timeseries = [], labels = [], titolo=''):
-    plt.figure(figsize=(40, 20), dpi=80)
+    plt.figure(figsize=(80, 40), dpi=60)
     plt.title(str(titolo))
     plt.ylabel('Vendite')
     plt.xlabel('Data')
@@ -44,7 +45,17 @@ def plot(timeseries = [], labels = [], titolo=''):
     plt.legend(loc='best')
     plt.show(block=False)
     return 
+# %%
+def sumrows(dataframe, giorni):
+    res = [0]
+    for g in giorni:
+        ind = len(res) - 1
+        for value in dataframe[g]:
+            res[ind] += value
+        res.append(0)
 
+    # Rimuoviamo l'ultimo elemento che è 0
+    return res[:-1]
 
 def load_data(filename, indexData=False):
     if indexData:        
@@ -54,12 +65,39 @@ def load_data(filename, indexData=False):
         dataframe = pd.read_csv(filename)
     return dataframe
 
+# %%
+def rolling(ts, w, meanOrStd=True):
+    '''
+    Parameters
+    ----------
+    ts : pd.Series
+        Serie temporale
+    w : integer
+        Finestra della rolling
+    meanOrStd : bool, optional
+        True se rolling mean, False std. The default is True.
+    Returns
+    -------
+    Rolling mean
+
+    '''
+    if meanOrStd:
+        return ts.rolling(window=w).mean()
+    return ts.rolling(window=w).std()
+# %%
 if __name__ == '__main__':
     print('Caricamento sales_train_validation.csv ...', end=' ')
     sales_train = load_data('./datasets/sales_train_validation.csv')
     print('Carimento completato')
     
     #%%
+    
+    shopNames = ['CA_1', 'CA_2', 'CA_3', 'CA_4', 'TX_1', 'TX_2', 'TX_3', 'WI_1', 'WI_2', 'WI_3']
+    stateNames = ['CA', 'TX', 'WI']
+    catNames = ['HOBBIES', 'HOUSEHOLD', 'FOODS']
+    
+    # %%
+    
     print('Creazione serie temporali (ancora dataframe) ...', end=' ')
     
     hobby = sales_train[sales_train['cat_id'] == 'HOBBIES']
@@ -83,10 +121,58 @@ if __name__ == '__main__':
     shopWI2 = sales_train[sales_train['store_id'] == 'WI_2']
     shopWI3 = sales_train[sales_train['store_id'] == 'WI_3']
     
-    print('Creazione completata')
+    shopList = [shopCA1, shopCA2, shopCA3, shopCA4, shopTX1, shopTX2, shopTX3, shopWI1, shopWI2, shopWI3]
+    stateList = [stateCA, stateTX, stateWI]
+    catList = [hobby, household, food]
     
-    #%% 
-    #Plot delle serie ottenute per verificare "influenze intrinseche". Bisogna creare le serie temporali per poter utilizzare la funzione plot
-    #plot([stateCA, stateTX, stateWI], ['California', 'Texas', 'Wisconsin'], 'Vendite per stato')
+    print('Creazione completata')
+
+    # %%
+    # Definisco l'array delle colonne d_1, ...., d_1913
+    giorni = []
+    for column in stateCA:
+        if 'd_' in column:
+            giorni.append(column)
+    
+    # %%
+    # Trasformiamo in serie temporali
+    # i negozi sono chiusi a Natale    
+    tsVenditeNegozio = []
+    
+    print('Sto creando le serie temporali delle vendite', end=' ')
+    for shop in shopList:
+        tsVenditeNegozio.append(pd.Series(data=sumrows(shop, giorni), 
+                                          index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
+    print('Operazione completata')
+    #%%
+    rollingVenditeNegozio = []
+    
+    print('Genero le rolling mean per negozio... ', end=' ')
+    for i in range(len(tsVenditeNegozio)):
+        rollingVenditeNegozio.append(rolling(tsVenditeNegozio[i], w=183))
+    print('Operazione completata')
+    
+    print('Plot del grafico...', end=' ')
+    plot(rollingVenditeNegozio, shopNames, 'Rolling mean vendite per negozio con window=%d'%183)
+    print('Operazione completata')    
+    # %%
+    tsVenditeStato = []
+    
+    print('Sto creando le serie temporali delle vendite...', end=' ')
+    for state in stateList:
+        tsVenditeStato.append(pd.Series(data=sumrows(state, giorni), 
+                                          index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
+    print('Operazione completata')
+    #%%
+    rollingVenditeStato = []
+    
+    print('Genero le rolling mean per stato... ', end=' ')
+    for i in range(len(tsVenditeStato)):
+        rollingVenditeStato.append(rolling(tsVenditeStato[i], w=365))
+    print('Operazione completata')
+    
+    print('Plot del grafico...', end=' ')
+    plot(rollingVenditeStato, stateNames, 'Rolling mean vendite per stato con window=%d'%365)
+    print('Operazione completata')
     
     
