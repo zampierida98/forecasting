@@ -135,16 +135,19 @@ if __name__ == '__main__':
             giorni.append(column)
     
     # %%
+    # Serie temporali per negozio
+    """
     # Trasformiamo in serie temporali
     # i negozi sono chiusi a Natale    
     tsVenditeNegozio = []
     
-    print('Sto creando le serie temporali delle vendite', end=' ')
+    print('Sto creando le serie temporali delle vendite per negozio...', end=' ')
     for shop in shopList:
         tsVenditeNegozio.append(pd.Series(data=sumrows(shop, giorni), 
                                           index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
     print('Operazione completata')
     #%%
+    
     rollingVenditeNegozio = []
     
     print('Genero le rolling mean per negozio... ', end=' ')
@@ -154,16 +157,20 @@ if __name__ == '__main__':
     
     print('Plot del grafico...', end=' ')
     plot(rollingVenditeNegozio, shopNames, 'Rolling mean vendite per negozio con window=%d'%183)
-    print('Operazione completata')    
+    print('Operazione completata')  
+    """
     # %%
+    # Serie temporali per stato
+    """
     tsVenditeStato = []
     
-    print('Sto creando le serie temporali delle vendite...', end=' ')
+    print('Sto creando le serie temporali delle vendite per stato...', end=' ')
     for state in stateList:
         tsVenditeStato.append(pd.Series(data=sumrows(state, giorni), 
                                           index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
     print('Operazione completata')
     #%%
+    
     rollingVenditeStato = []
     
     print('Genero le rolling mean per stato... ', end=' ')
@@ -173,6 +180,27 @@ if __name__ == '__main__':
     
     print('Plot del grafico...', end=' ')
     plot(rollingVenditeStato, stateNames, 'Rolling mean vendite per stato con window=%d'%365)
+    print('Operazione completata')
+    """
+    # %%
+    # Serie temporali per categoria
+    tsVenditeCat = []
+    
+    print('Sto creando le serie temporali delle vendite per categoria...', end=' ')
+    for cat in catList:
+        tsVenditeCat.append(pd.Series(data=sumrows(cat, giorni), 
+                                          index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
+    print('Operazione completata')
+    #%%
+    rollingVenditeCat = []
+    
+    print('Genero le rolling mean per categoria... ', end=' ')
+    for i in range(len(tsVenditeCat)):
+        rollingVenditeCat.append(rolling(tsVenditeCat[i], w=7))
+    print('Operazione completata')
+    
+    print('Plot del grafico...', end=' ')
+    plot(rollingVenditeCat, catNames, 'Rolling mean vendite per categoria con window=%d'%7)
     print('Operazione completata')
     
     
