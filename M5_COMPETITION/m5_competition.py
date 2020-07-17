@@ -136,7 +136,7 @@ if __name__ == '__main__':
     
     # %%
     # Serie temporali per negozio
-    """
+
     # Trasformiamo in serie temporali
     # i negozi sono chiusi a Natale    
     tsVenditeNegozio = []
@@ -152,13 +152,13 @@ if __name__ == '__main__':
     
     print('Genero le rolling mean per negozio... ', end=' ')
     for i in range(len(tsVenditeNegozio)):
-        rollingVenditeNegozio.append(rolling(tsVenditeNegozio[i], w=183))
+        rollingVenditeNegozio.append(rolling(tsVenditeNegozio[i], w=7))
     print('Operazione completata')
     
     print('Plot del grafico...', end=' ')
-    plot(rollingVenditeNegozio, shopNames, 'Rolling mean vendite per negozio con window=%d'%183)
+    plot(rollingVenditeNegozio, shopNames, 'Rolling mean vendite per negozio con window=%d'%7)
     print('Operazione completata')  
-    """
+
     # %%
     # Serie temporali per stato
     """
@@ -175,15 +175,17 @@ if __name__ == '__main__':
     
     print('Genero le rolling mean per stato... ', end=' ')
     for i in range(len(tsVenditeStato)):
-        rollingVenditeStato.append(rolling(tsVenditeStato[i], w=365))
+        rollingVenditeStato.append(rolling(tsVenditeStato[i], w=7))
     print('Operazione completata')
     
     print('Plot del grafico...', end=' ')
-    plot(rollingVenditeStato, stateNames, 'Rolling mean vendite per stato con window=%d'%365)
+    plot(rollingVenditeStato, stateNames, 'Rolling mean vendite per stato con window=%d'%7)
     print('Operazione completata')
     """
+    
     # %%
     # Serie temporali per categoria
+    """
     tsVenditeCat = []
     
     print('Sto creando le serie temporali delle vendite per categoria...', end=' ')
@@ -202,5 +204,5 @@ if __name__ == '__main__':
     print('Plot del grafico...', end=' ')
     plot(rollingVenditeCat, catNames, 'Rolling mean vendite per categoria con window=%d'%7)
     print('Operazione completata')
-    
+    """
     
