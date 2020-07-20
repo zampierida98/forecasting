@@ -116,7 +116,25 @@ def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     plt.legend(loc = 'best')
     title = 'Funzione di autocorrelazione: ' + str(titleSpec) 
     plt.title(title)
-    
+
+def correlation(ts1, ts2):
+    '''
+    Correlation è il metodo che calcola la correlazione fra due serie temporali
+    Parameters
+    ----------
+    ts1 : pd.Series
+        Prima serie temporale
+    ts2 : pd.Series
+        Seconda serie temporale
+
+    Returns res
+    -------
+    float
+        È un valore compreso fra 0 e 1
+
+    '''
+    return ts1.corr(ts2)
+
 # %%
 if __name__ == '__main__':
     print('Caricamento sales_train_validation.csv ...', end=' ')
@@ -270,7 +288,7 @@ if __name__ == '__main__':
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
     
     autocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 400)
-    
+
     #%%
     
     # Serie temporali per categoria
@@ -299,3 +317,35 @@ if __name__ == '__main__':
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
     
     autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 30)
+    
+    # %%
+    # Calcolo la correlazione fra le serie temporali vendite per stato e per categoria
+    
+    ind = 0
+    for s in tsVenditeStato:
+        ind2 = 0
+        for s2 in tsVenditeCat:
+            print(stateNames[ind], catNames[ind2] , ':', correlation(s,s2))
+            ind2 += 1
+        ind += 1
+    # %%
+    # Calcolo la correlazione fra le serie temporali vendite per negozio e per categoria
+    
+    ind = 0
+    for s in tsVenditeNegozio:
+        ind2 = 0
+        for s2 in tsVenditeCat:
+            print(shopNames[ind], catNames[ind2] , ':', correlation(s,s2))
+            ind2 += 1
+        ind += 1
+    
+    # %%
+    # Calcolo la correlazione fra le serie temporali vendite per stato e per negozio
+    
+    ind = 0
+    for s in tsVenditeStato:
+        ind2 = 0
+        for s2 in tsVenditeNegozio:
+            print(stateNames[ind], shopNames[ind2] , ':', correlation(s,s2))
+            ind2 += 1
+        ind += 1
