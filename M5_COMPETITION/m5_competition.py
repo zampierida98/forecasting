@@ -196,7 +196,7 @@ if __name__ == '__main__':
     
     # Calcolo l'autocorrelazioni delle serie di vendite per negozio
     
-    autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio")
+    autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400)
 
     # %%
     # Serie temporali per stato
@@ -223,6 +223,10 @@ if __name__ == '__main__':
     print('Operazione completata')
     """
     
+    # Calcolo l'autocorrelazioni delle serie di vendite per stato
+    
+    autocorrelation(tsVenditeStato, titleSpec = "Vendite per stato", lags = 400)
+    
     # %%
     # Serie temporali per categoria
     
@@ -246,4 +250,8 @@ if __name__ == '__main__':
     plot(rollingVenditeCat, catNames, 'Rolling mean vendite per categoria con window=%d'%7)
     print('Operazione completata')
     """
+    
+    # Calcolo l'autocorrelazioni delle serie di vendite per categoria
+    
+    autocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 400)
     
