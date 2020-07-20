@@ -84,6 +84,28 @@ def rolling(ts, w, meanOrStd=True):
     if meanOrStd:
         return ts.rolling(window=w).mean()
     return ts.rolling(window=w).std()
+
+#%%
+def autocorrelation(ts, lags):
+    """
+    Parameters
+    ----------
+    ts : pd.Series
+        Serie temporale
+    lags : integer
+        Ampiezza finestra di visualizzazione del grafico di autocorrelazione
+    Returns
+    -------
+    None.
+    """
+    autocor = acf(ts, nlags=lags)
+    plt.plot(autocor, color = 'orange')
+    #Delimito i tre intervalli
+    plt.axhline(y=0,linestyle='--',color='gray')
+    plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='black')
+    plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='black')
+    plt.title('Funzione di autocorrelazione')
+    
 # %%
 if __name__ == '__main__':
     print('Caricamento sales_train_validation.csv ...', end=' ')
@@ -155,13 +177,15 @@ if __name__ == '__main__':
         rollingVenditeNegozio.append(rolling(tsVenditeNegozio[i], w=7))
     print('Operazione completata')
     
+    """
     print('Plot del grafico...', end=' ')
     plot(rollingVenditeNegozio, shopNames, 'Rolling mean vendite per negozio con window=%d'%7)
-    print('Operazione completata')  
+    print('Operazione completata') 
+    """
 
     # %%
     # Serie temporali per stato
-    """
+    
     tsVenditeStato = []
     
     print('Sto creando le serie temporali delle vendite per stato...', end=' ')
@@ -178,6 +202,7 @@ if __name__ == '__main__':
         rollingVenditeStato.append(rolling(tsVenditeStato[i], w=7))
     print('Operazione completata')
     
+    """
     print('Plot del grafico...', end=' ')
     plot(rollingVenditeStato, stateNames, 'Rolling mean vendite per stato con window=%d'%7)
     print('Operazione completata')
@@ -185,7 +210,7 @@ if __name__ == '__main__':
     
     # %%
     # Serie temporali per categoria
-    """
+    
     tsVenditeCat = []
     
     print('Sto creando le serie temporali delle vendite per categoria...', end=' ')
@@ -201,6 +226,7 @@ if __name__ == '__main__':
         rollingVenditeCat.append(rolling(tsVenditeCat[i], w=7))
     print('Operazione completata')
     
+    """
     print('Plot del grafico...', end=' ')
     plot(rollingVenditeCat, catNames, 'Rolling mean vendite per categoria con window=%d'%7)
     print('Operazione completata')
