@@ -86,7 +86,7 @@ def rolling(ts, w, meanOrStd=True):
     return ts.rolling(window=w).std()
 
 #%%
-def autocorrelation(ts, lags):
+def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     """
     Parameters
     ----------
@@ -94,17 +94,28 @@ def autocorrelation(ts, lags):
         Serie temporale
     lags : integer
         Ampiezza finestra di visualizzazione del grafico di autocorrelazione
+    titleSpec : str
+        Specifica le serie di cui si calcola l'autocorrelazione (di fatto una 
+        parte del titolo del grafico...)
     Returns
     -------
     None.
     """
-    autocor = acf(ts, nlags=lags)
-    plt.plot(autocor, color = 'orange')
+    autocor = []
+    for timeserie in ts:
+        autocor.append(acf(timeserie, nlags=lags))
+    i = 0
+    plt.figure(figsize=(80, 40), dpi=60)
+    for fun in autocor:
+        plt.plot(fun, color = COLORPALETTE[i])
+        i += 1
     #Delimito i tre intervalli
     plt.axhline(y=0,linestyle='--',color='gray')
     plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='black')
     plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='black')
-    plt.title('Funzione di autocorrelazione')
+    plt.legend(loc = 'best')
+    title = 'Funzione di autocorrelazione: ' + str(titleSpec) 
+    plt.title(title)
     
 # %%
 if __name__ == '__main__':
@@ -182,6 +193,10 @@ if __name__ == '__main__':
     plot(rollingVenditeNegozio, shopNames, 'Rolling mean vendite per negozio con window=%d'%7)
     print('Operazione completata') 
     """
+    
+    # Calcolo l'autocorrelazioni delle serie di vendite per negozio
+    
+    autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio")
 
     # %%
     # Serie temporali per stato
