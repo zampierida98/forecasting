@@ -91,7 +91,7 @@ def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     Parameters
     ----------
     ts : pd.Series
-        Serie temporale
+        Lista di serie temporali
     lags : integer
         Ampiezza finestra di visualizzazione del grafico di autocorrelazione
     titleSpec : str
