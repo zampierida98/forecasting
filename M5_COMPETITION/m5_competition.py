@@ -128,6 +128,8 @@ if __name__ == '__main__':
     shopNames = ['CA_1', 'CA_2', 'CA_3', 'CA_4', 'TX_1', 'TX_2', 'TX_3', 'WI_1', 'WI_2', 'WI_3']
     stateNames = ['CA', 'TX', 'WI']
     catNames = ['HOBBIES', 'HOUSEHOLD', 'FOODS']
+    StatoAndCatNames = ['CA_HOBBIES', 'CA_HOUSEHOLD', 'CA_FOODS', 'TX_HOBBIES', 'TX_HOUSEHOLD', 'TX_FOOD',
+                        'WI_HOBBIES', 'WI_HOUSEHOLD', 'WI_FOODS']
     
     # %%
     
@@ -154,9 +156,23 @@ if __name__ == '__main__':
     shopWI2 = sales_train[sales_train['store_id'] == 'WI_2']
     shopWI3 = sales_train[sales_train['store_id'] == 'WI_3']
     
+    stateCAhobbies = sales_train[np.logical_and(sales_train['state_id'] == 'CA', sales_train['cat_id'] == 'HOBBIES')]
+    stateCAhousehold = sales_train[np.logical_and(sales_train['state_id'] == 'CA', sales_train['cat_id'] == 'HOUSEHOLD')]
+    stateCAfoods = sales_train[np.logical_and(sales_train['state_id'] == 'CA', sales_train['cat_id'] == 'FOODS')]
+    
+    stateTXhobbies = sales_train[np.logical_and(sales_train['state_id'] == 'TX', sales_train['cat_id'] == 'HOBBIES')]
+    stateTXhousehold = sales_train[np.logical_and(sales_train['state_id'] == 'TX', sales_train['cat_id'] == 'HOUSEHOLD')]
+    stateTXfoods = sales_train[np.logical_and(sales_train['state_id'] == 'TX', sales_train['cat_id'] == 'FOODS')]
+    
+    stateWIhobbies = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'HOBBIES')]
+    stateWIhousehold = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'HOUSEHOLD')]
+    stateWIfoods = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'FOODS')]
+    
     shopList = [shopCA1, shopCA2, shopCA3, shopCA4, shopTX1, shopTX2, shopTX3, shopWI1, shopWI2, shopWI3]
     stateList = [stateCA, stateTX, stateWI]
     catList = [hobby, household, food]
+    stateAndCatList = [stateCAhobbies, stateCAhousehold, stateCAfoods, stateTXhobbies, stateTXhousehold,
+                       stateTXfoods, stateWIhobbies, stateWIhousehold, stateWIfoods]
     
     print('Creazione completata')
 
@@ -255,3 +271,31 @@ if __name__ == '__main__':
     
     autocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 400)
     
+    #%%
+    
+    # Serie temporali per categoria
+    
+    tsVenditeStatoAndCat = []
+    
+    print('Sto creando le serie temporali delle vendite per stato e categoria...', end=' ')
+    for stateAndCat in stateAndCatList:
+        tsVenditeStatoAndCat.append(pd.Series(data=sumrows(stateAndCat, giorni), 
+                                          index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
+    print('Operazione completata')
+    #%%
+    rollingVenditeStatoAndCat = []
+    
+    print('Genero le rolling mean per stato e categoria... ', end=' ')
+    for i in range(len(tsVenditeStatoAndCat)):
+        rollingVenditeStatoAndCat.append(rolling(tsVenditeStatoAndCat[i], w=7))
+    print('Operazione completata')
+   
+    """
+    print('Plot del grafico...', end=' ')
+    plot(rollingVenditeStatoAndCat, StatoAndCatNames, 'Rolling mean vendite per stato e categoria con window=%d'%7)
+    print('Operazione completata')
+    """
+    
+    # Calcolo l'autocorrelazioni delle serie di vendite per categoria
+    
+    autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 30)
