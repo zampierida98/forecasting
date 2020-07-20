@@ -325,7 +325,7 @@ if __name__ == '__main__':
     for s in tsVenditeStato:
         ind2 = 0
         for s2 in tsVenditeCat:
-            print(stateNames[ind], catNames[ind2] , ':', correlation(s,s2))
+            print(stateNames[ind], catNames[ind2] , ':', round(correlation(s,s2),3))
             ind2 += 1
         ind += 1
     # %%
@@ -335,7 +335,7 @@ if __name__ == '__main__':
     for s in tsVenditeNegozio:
         ind2 = 0
         for s2 in tsVenditeCat:
-            print(shopNames[ind], catNames[ind2] , ':', correlation(s,s2))
+            print(shopNames[ind], catNames[ind2] , ':', round(correlation(s,s2),3))
             ind2 += 1
         ind += 1
     
@@ -346,6 +346,6 @@ if __name__ == '__main__':
     for s in tsVenditeStato:
         ind2 = 0
         for s2 in tsVenditeNegozio:
-            print(stateNames[ind], shopNames[ind2] , ':', correlation(s,s2))
+            print(stateNames[ind], shopNames[ind2] , ':', round(correlation(s,s2),3))
             ind2 += 1
         ind += 1
