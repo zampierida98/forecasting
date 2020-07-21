@@ -12,6 +12,12 @@ import pandas as pd
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import acf, pacf
 from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.seasonal import seasonal_decompose
+from sklearn.metrics import mean_squared_error
+
+# SOPPRIMIAMO I WARNING DI NUMPY
+np.warnings.filterwarnings('ignore')
 
 # IMPOSTAZIONI SUI GRAFICI
 SMALL_SIZE = 32
@@ -135,14 +141,121 @@ def correlation(ts1, ts2):
     '''
     return ts1.corr(ts2)
 
+def ETS_FORECASTING(ts,periodo=365, h=100):
+    '''
+    La funzione ETS_FORECASTING calcola, le previsioni serie temporali
+    ritornando il modello e le previsioni
+    Parameters
+    ----------
+    ts : pd.Series
+        Serie temporale
+    periodo : int, optional
+        Il periodo di stagionalità. The default is 365.
+    h : int, optional
+        Orizzonte di previsione
+    Returns: 
+    -------
+    (model, model_forecasting) ovvero il modello e le previsioni
+    '''
+    model = ExponentialSmoothing(ts, trend="add", damped=True, seasonal="add", seasonal_periods=periodo)
+    model_fitted = model.fit()
+    model_forecasting = model_fitted.forecast(steps=h)
+    return model_fitted.fittedvalues, model_forecasting
+
+def ETS_DECOMPOSITION_FORECASTING(ts, periodo=365, due_lati=False, h=100):
+    '''
+    La funzione ETS_FORECASTING calcola, per decomposizione, le previsioni serie temporali
+    ritornando il modello e le previsioni
+    Parameters
+    ----------
+    ts : pd.Series
+        Serie temporale
+    periodo : int, optional
+        Il periodo di stagionalità. The default is 365.
+    due_lati : bool, optional
+        Indica il two_sided della decomposizione. The default is False.
+    
+    h : int, optional
+        Orizzonte di previsione
+    Returns: 
+    -------
+    (model, model_forecasting) ovvero il modello e le previsioni
+    '''
+    decomposition = seasonal_decompose(ts, period=periodo, two_sided=due_lati)
+    
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+    
+    trend.dropna(inplace=True)
+    seasonal.dropna(inplace=True)
+    residual.dropna(inplace=True)
+    
+    print('Plot delle componenti')
+    plot([trend, seasonal, residual], ['trend', 'stagionalità', 'residual'], 'Stato')
+
+    # Creiamo dei modelli per trend e seasonal + USO ARIMA PER I RESIDUAL VISTO CHE SONO UNA COMPONENTE STAZION.
+    trend_model = ExponentialSmoothing(trend, trend="add", damped = True, seasonal=None)
+    seasonal_model = ExponentialSmoothing(seasonal, trend=None, seasonal='add', seasonal_periods=periodo)
+    
+    # ARIMA SU RESIDUAL (PER FORZA)
+    residual_model = ARIMA(residual, order=(5, 0, 5))
+    
+    # fit model
+    trend_fitted    = trend_model.fit()
+    seasonal_fitted = seasonal_model.fit()
+    residual_fitted = residual_model.fit()
+    
+    # make prediction. Stesso periodo del validation set!    
+    trend_model_predictions = trend_fitted.forecast(steps=h)
+    seasonal_model_predictions = seasonal_fitted.forecast(steps=h)
+    residual_model_predictions, _, _ = residual_fitted.forecast(steps=h)
+    
+    #Sommo i modelli
+    model = trend_fitted.fittedvalues \
+                + seasonal_fitted.fittedvalues \
+                + residual_fitted.fittedvalues
+
+    #Sommo le previsioni
+    model_forecasting = trend_model_predictions \
+                        + seasonal_model_predictions \
+                        + residual_model_predictions                       
+    model_forecasting.dropna(inplace=True)
+    return (model, model_forecasting)
+
+def MAE_error(ts, model):
+    errore = model - ts
+    errore.dropna(inplace=True)
+
+    return sum(abs(errore))/len(errore)
+
+def HyndmanAndKoehler_error(ts, model, periodo=365):
+    errore = model - ts
+    errore.dropna(inplace=True)
+    
+    T = len(ts)
+    denominatore = 0
+    for i in range(periodo, T):
+        denominatore += abs(ts[i] - ts[i - periodo])
+    denominatore *= 1/(T - periodo)
+    
+    q = []
+    for ej in errore:
+        q.append(abs(ej)/denominatore)
+    
+    res = 0
+    for i in range(0,len(q)):
+        res += q[i]
+    return res/len(q)
+
 # %%
 if __name__ == '__main__':
     print('Caricamento sales_train_validation.csv ...', end=' ')
     sales_train = load_data('./datasets/sales_train_validation.csv')
     print('Carimento completato')
     
-    #%%
-    
+    #%% 
+    # Sezione dove definiamo i nomi delle proprietà/campi del file sales_train_validation.csv
     shopNames = ['CA_1', 'CA_2', 'CA_3', 'CA_4', 'TX_1', 'TX_2', 'TX_3', 'WI_1', 'WI_2', 'WI_3']
     stateNames = ['CA', 'TX', 'WI']
     catNames = ['HOBBIES', 'HOUSEHOLD', 'FOODS']
@@ -150,17 +263,15 @@ if __name__ == '__main__':
                         'WI_HOBBIES', 'WI_HOUSEHOLD', 'WI_FOODS']
     
     # %%
-    
+    # Sezione dove andiamo a creare i DATAFRAME che rappresenteranno le serie temporali nelle sezioni successive
     print('Creazione serie temporali (ancora dataframe) ...', end=' ')
     
+    # DATAFRAME per categoria
     hobby = sales_train[sales_train['cat_id'] == 'HOBBIES']
     household = sales_train[sales_train['cat_id'] == 'HOUSEHOLD']
     food = sales_train[sales_train['cat_id'] == 'FOODS']
-    
-    stateCA = sales_train[sales_train['state_id'] == 'CA']
-    stateTX = sales_train[sales_train['state_id'] == 'TX']
-    stateWI = sales_train[sales_train['state_id'] == 'WI']
-    
+
+    # DATAFRAME per negozio
     shopCA1 = sales_train[sales_train['store_id'] == 'CA_1']
     shopCA2 = sales_train[sales_train['store_id'] == 'CA_2']
     shopCA3 = sales_train[sales_train['store_id'] == 'CA_3']
@@ -174,6 +285,12 @@ if __name__ == '__main__':
     shopWI2 = sales_train[sales_train['store_id'] == 'WI_2']
     shopWI3 = sales_train[sales_train['store_id'] == 'WI_3']
     
+    # DATAFRAME per stato
+    stateCA = sales_train[sales_train['state_id'] == 'CA']
+    stateTX = sales_train[sales_train['state_id'] == 'TX']
+    stateWI = sales_train[sales_train['state_id'] == 'WI']
+
+    # DATAFRAME per stato e categoria
     stateCAhobbies = sales_train[np.logical_and(sales_train['state_id'] == 'CA', sales_train['cat_id'] == 'HOBBIES')]
     stateCAhousehold = sales_train[np.logical_and(sales_train['state_id'] == 'CA', sales_train['cat_id'] == 'HOUSEHOLD')]
     stateCAfoods = sales_train[np.logical_and(sales_train['state_id'] == 'CA', sales_train['cat_id'] == 'FOODS')]
@@ -184,8 +301,9 @@ if __name__ == '__main__':
     
     stateWIhobbies = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'HOBBIES')]
     stateWIhousehold = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'HOUSEHOLD')]
-    stateWIfoods = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'FOODS')]
+    stateWIfoods = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'FOODS')]    
     
+    # LISTE DI DATAFRAME RAGGRUPPATE PER PROPRIETA'
     shopList = [shopCA1, shopCA2, shopCA3, shopCA4, shopTX1, shopTX2, shopTX3, shopWI1, shopWI2, shopWI3]
     stateList = [stateCA, stateTX, stateWI]
     catList = [hobby, household, food]
@@ -193,14 +311,13 @@ if __name__ == '__main__':
                        stateTXfoods, stateWIhobbies, stateWIhousehold, stateWIfoods]
     
     print('Creazione completata')
-
     # %%
     # Definisco l'array delle colonne d_1, ...., d_1913
+    
     giorni = []
-    for column in stateCA:
+    for column in stateCA: # PRENDIAMO UN DATAFRAME FRA QUELLE SOPRA CONDIVIDONO LE COLONNE d_1,..., d_1913
         if 'd_' in column:
             giorni.append(column)
-    
     # %%
     # Serie temporali per negozio
 
@@ -214,6 +331,8 @@ if __name__ == '__main__':
                                           index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
     print('Operazione completata')
     #%%
+    # Analiziamo le serie temporali dei negozi
+    # Plottiamo la rolling mean (visualizziamo la componente TREND)
     
     rollingVenditeNegozio = []
     
@@ -229,7 +348,6 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per negozio
-    
     autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400)
 
     # %%
@@ -243,6 +361,8 @@ if __name__ == '__main__':
                                           index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
     print('Operazione completata')
     #%%
+    # Analiziamo le serie temporali per stato
+    # Plottiamo la rolling mean (visualizziamo la componente TREND)
     
     rollingVenditeStato = []
     
@@ -258,7 +378,6 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per stato
-    
     autocorrelation(tsVenditeStato, titleSpec = "Vendite per stato", lags = 400)
     
     # %%
@@ -272,6 +391,9 @@ if __name__ == '__main__':
                                           index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
     print('Operazione completata')
     #%%
+    # Analiziamo le serie temporali per categoria
+    # Plottiamo la rolling mean (visualizziamo la componente TREND)
+    
     rollingVenditeCat = []
     
     print('Genero le rolling mean per categoria... ', end=' ')
@@ -286,12 +408,10 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
-    
     autocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 400)
 
     #%%
-    
-    # Serie temporali per categoria
+    # Serie temporali per stato & categoria
     
     tsVenditeStatoAndCat = []
     
@@ -301,6 +421,9 @@ if __name__ == '__main__':
                                           index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
     print('Operazione completata')
     #%%
+    # Analiziamo le serie temporali per stato & categoria
+    # Plottiamo la rolling mean (visualizziamo la componente TREND)
+    
     rollingVenditeStatoAndCat = []
     
     print('Genero le rolling mean per stato e categoria... ', end=' ')
@@ -315,7 +438,6 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
-    
     autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 30)
     
     # %%
@@ -349,3 +471,24 @@ if __name__ == '__main__':
             print(stateNames[ind], shopNames[ind2] , ':', round(correlation(s,s2),3))
             ind2 += 1
         ind += 1
+    
+    # %%
+    # Usiamo ETS_FORECASTING e ETS_DECOMPOSITION_FORECASTING
+    # PER PREVEDERE LE SERIE TEMPORALI
+    # Serie per stato
+
+    print('Plot del grafico dei modelli e delle previsioni per stato...')
+    
+    #plot([ts, model, forecasting], [stateNames[ind], 'modello', 'previsioni'], 'Previsioni con ETS per '+stateNames[ind])
+    ind = 0
+    for ts in tsVenditeStato:
+        model,forecasting = ETS_DECOMPOSITION_FORECASTING(ts,periodo=365, h=1941-1913)
+        mase = HyndmanAndKoehler_error(ts, model)
+        print(f'MASE ETS_DECOMPOSITION_FORECASTING DI {stateNames[ind]} = {mase}')
+        model,forecasting = ETS_FORECASTING(ts,periodo=365, h=1941-1913)
+        mase = HyndmanAndKoehler_error(ts, model)
+        print(f'MASE ETS_FORECASTING DI {stateNames[ind]} = {mase}')
+        ind+=1
+        
+    print('Operazione completata')
+    
