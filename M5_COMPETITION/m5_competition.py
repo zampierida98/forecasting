@@ -189,22 +189,30 @@ def ETS_DECOMPOSITION_FORECASTING(ts, periodo=365, due_lati=False, h=100):
     
     trend.dropna(inplace=True)
     seasonal.dropna(inplace=True)
-    residual.dropna(inplace=True)
-    
-    print('Plot delle componenti')
-    plot([trend, seasonal, residual], ['trend', 'stagionalità', 'residual'], 'Stato')
+    residual.dropna(inplace=True)    
 
     # Creiamo dei modelli per trend e seasonal + USO ARIMA PER I RESIDUAL VISTO CHE SONO UNA COMPONENTE STAZION.
     trend_model = ExponentialSmoothing(trend, trend="add", damped = True, seasonal=None)
     seasonal_model = ExponentialSmoothing(seasonal, trend=None, seasonal='add', seasonal_periods=periodo)
-    
-    # ARIMA SU RESIDUAL (PER FORZA)
-    residual_model = ARIMA(residual, order=(5, 0, 5))
-    
+
     # fit model
     trend_fitted    = trend_model.fit()
     seasonal_fitted = seasonal_model.fit()
-    residual_fitted = residual_model.fit()
+    
+    # ARIMA SU RESIDUAL (PER FORZA)
+    flag = True
+    q = 5
+    residual_fitted = None
+    while flag:
+        try:    
+            residual_model = ARIMA(residual, order=(5, 0, q))
+            #fit model
+            residual_fitted = residual_model.fit()
+            flag = False
+        except:
+            q -= 1
+            
+    
     
     # make prediction. Stesso periodo del validation set!    
     trend_model_predictions = trend_fitted.forecast(steps=h)
@@ -248,6 +256,56 @@ def HyndmanAndKoehler_error(ts, model, periodo=365):
         res += q[i]
     return res/len(q)
 
+'''
+res = []
+    for value in l:
+        if value == list:
+            tmp = []
+            for v in value:
+                tmp.append(v)
+            res.append(tmp)
+        else:
+            res.append(res)
+'''
+
+def save_obj(obj, filename):
+    '''
+    save_list salva una lista su un file in filename 
+    Parameters
+    ----------
+    l : list
+        lista da salvare
+    filename : str
+        path del file
+
+    Returns
+    -------
+    None.
+    '''
+    import pickle
+
+    with open(filename, 'wb') as fout:
+        pickle.dump(obj, fout, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(filename):
+    '''
+    load_list recupera su lista i valori in un file
+    Parameters
+    ----------
+    filename : str
+        path del file da caricare
+
+    Returns
+    -------
+    None.
+
+    '''
+    import pickle
+    res = None
+    with open(filename, 'rb') as fin:
+        res = pickle.load(fin)
+    return res
+    
 # %%
 if __name__ == '__main__':
     print('Caricamento sales_train_validation.csv ...', end=' ')
@@ -477,7 +535,7 @@ if __name__ == '__main__':
     # PER PREVEDERE LE SERIE TEMPORALI
     # Serie per stato
 
-    print('Plot del grafico dei modelli e delle previsioni per stato...')
+    print('Stime modelli delle previsioni per STATO...')
     
     #plot([ts, model, forecasting], [stateNames[ind], 'modello', 'previsioni'], 'Previsioni con ETS per '+stateNames[ind])
     ind = 0
@@ -491,4 +549,81 @@ if __name__ == '__main__':
         ind+=1
         
     print('Operazione completata')
+    print('Meglio ETS con decomposizione che quello ETS(A,A)')
     
+    # %%
+    
+    # NOTA: VEDERE FIGURA PG.4 del doc M5-Competitors-Guide-Final-10-March-2020.docx
+
+    # NOTA2: la sezione successiva va a caricare l'oggetto tsForecastingNegozio
+        # da un file così non c'è ogni volta da aspettare che si generino le previsioni
+        # visto che è lungo
+    
+
+
+    # Abbiamo la seguente gerarchia:
+    # +(liv. 0)      vendite TOTALI
+    # +(liv. 1)      vendite per STATO
+    # +(liv. 2)      vendite per NEGOZIO
+    # -(liv. 3)      vendite per CATEGORIA          <<< --- DA ELIMINARE
+    # *(liv. 4)      vendite per STATO & CATEGORIA  <<< --- raggruppando ci trova le vendite per STATO SALTANDO NEGOZIO
+    # +(liv. 5)      vendite per NEGOZIO & CATEGORIA
+    
+    
+    # Quindi noi usando l'approccio bottom-up prima realizziamo le previsioni
+    # delle serie temporali per NEGOZIO & CATEGORIA poi raggruppiamo le serie temporali
+    # per NEGOZIO ottenendo "vendite per NEGOZIO" poi raggruppando ulteriormente
+    # abbiamo quelle per "STATO" e infine le vendite "TOTALI"
+    
+    # parto da NEGOZIO ma dovremmo partire da NEGOZIO & CATEGORIA
+    
+    print('Stime modelli delle previsioni per NEGOZIO...')
+    
+    ind = 0
+    tsForecastingNegozio = []
+    for ts in tsVenditeNegozio:
+        model,forecasting = ETS_DECOMPOSITION_FORECASTING(ts,periodo=365, h=1941-1913)
+        mase = HyndmanAndKoehler_error(ts, model)
+        print(f'MASE ETS_DECOMPOSITION_FORECASTING DI {shopNames[ind]} = {mase}')
+        tsForecastingNegozio.append(forecasting)
+        ind+=1
+        
+    print('Operazione completata')
+    
+    # %%
+    print('Salvo l\'oggetto "tsVenditeNegozio" su file così da caricarlo in momenti successivi')
+    
+    save_obj(tsVenditeNegozio, 'tsVenditeNegozio.pyobj')
+    
+    # %%
+    tsVenditeNegozio = load_obj('tsVenditeNegozio.pyobj')
+    
+    print('Caricamento di "tsVenditeNegozio" completato')
+    
+    # %%
+    
+    print('Sommiamo le previsioni in base al\'appartenenza di un negozio ad uno STATO...')
+    
+    ts_Ger_ForecastingStato = []
+    state = shopNames[0] + 'ABCD'     # stringa non presente nei nomi dei negozi
+    ind = 0
+    
+    for s in shopNames:
+        if state in s:
+            couplesElem = zip(tsForecastingNegozio[len(ts_Ger_ForecastingStato)], tsForecastingNegozio[ind])
+            tsForecastingNegozio[ind] = [x + y for (x, y) in couplesElem]
+        else:
+            state = s[0:2]
+            ts_Ger_ForecastingStato.append(tsForecastingNegozio[ind])
+            
+        ind += 1
+    
+    print('Operazione completata')
+    
+    print('Sommiamo le previsioni per ogni STATO ottenendo le previsioni di vendita TOTALI...')
+    
+    ts_Ger_ForecastingVenditeTot = ts_Ger_ForecastingStato[0]
+    ts_Ger_ForecastingVenditeTot = [x + y for (x, y) in zip(ts_Ger_ForecastingVenditeTot, ts_Ger_ForecastingStato[1])]
+    ts_Ger_ForecastingVenditeTot = [x + y for (x, y) in zip(ts_Ger_ForecastingVenditeTot, ts_Ger_ForecastingStato[2])]
+    
+    print('Operazione completata')
