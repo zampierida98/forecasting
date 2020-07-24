@@ -256,18 +256,6 @@ def HyndmanAndKoehler_error(ts, model, periodo=365):
         res += q[i]
     return res/len(q)
 
-'''
-res = []
-    for value in l:
-        if value == list:
-            tmp = []
-            for v in value:
-                tmp.append(v)
-            res.append(tmp)
-        else:
-            res.append(res)
-'''
-
 def save_obj(obj, filename):
     '''
     save_list salva una lista su un file in filename 
@@ -591,14 +579,14 @@ if __name__ == '__main__':
     print('Operazione completata')
     
     # %%
-    print('Salvo l\'oggetto "tsVenditeNegozio" su file così da caricarlo in momenti successivi')
+    print('Salvo l\'oggetto "tsForecastingNegozio" su file così da caricarlo in momenti successivi')
     
-    save_obj(tsVenditeNegozio, 'tsVenditeNegozio.pyobj')
+    save_obj(tsForecastingNegozio, 'tsForecastingNegozio.pyobj')
     
     # %%
-    tsVenditeNegozio = load_obj('tsVenditeNegozio.pyobj')
+    tsForecastingNegozio = load_obj('tsForecastingNegozio.pyobj')
     
-    print('Caricamento di "tsVenditeNegozio" completato')
+    print('Caricamento di "tsForecastingNegozio" completato')
     
     # %%
     
@@ -610,8 +598,7 @@ if __name__ == '__main__':
     
     for s in shopNames:
         if state in s:
-            couplesElem = zip(tsForecastingNegozio[len(ts_Ger_ForecastingStato)], tsForecastingNegozio[ind])
-            tsForecastingNegozio[ind] = [x + y for (x, y) in couplesElem]
+            ts_Ger_ForecastingStato[len(ts_Ger_ForecastingStato) - 1] += tsForecastingNegozio[ind]
         else:
             state = s[0:2]
             ts_Ger_ForecastingStato.append(tsForecastingNegozio[ind])
@@ -622,8 +609,8 @@ if __name__ == '__main__':
     
     print('Sommiamo le previsioni per ogni STATO ottenendo le previsioni di vendita TOTALI...')
     
-    ts_Ger_ForecastingVenditeTot = ts_Ger_ForecastingStato[0]
-    ts_Ger_ForecastingVenditeTot = [x + y for (x, y) in zip(ts_Ger_ForecastingVenditeTot, ts_Ger_ForecastingStato[1])]
-    ts_Ger_ForecastingVenditeTot = [x + y for (x, y) in zip(ts_Ger_ForecastingVenditeTot, ts_Ger_ForecastingStato[2])]
+    ts_Ger_ForecastingVenditeTot = ts_Ger_ForecastingStato[0][:]    #[:] per eseguire una copia
+    ts_Ger_ForecastingVenditeTot += ts_Ger_ForecastingStato[1]
+    ts_Ger_ForecastingVenditeTot += ts_Ger_ForecastingStato[2]
     
     print('Operazione completata')
