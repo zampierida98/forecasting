@@ -349,6 +349,16 @@ if __name__ == '__main__':
     stateWIhousehold = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'HOUSEHOLD')]
     stateWIfoods = sales_train[np.logical_and(sales_train['state_id'] == 'WI', sales_train['cat_id'] == 'FOODS')]    
     
+    #DATAFRAME per negozio e categoria
+    shopAndCatList = []
+    for s in shopNames:
+        storeShobbies = sales_train[np.logical_and(sales_train['store_id'] == s, sales_train['cat_id'] == 'HOBBIES')]
+        storeShousehold = sales_train[np.logical_and(sales_train['store_id'] == s, sales_train['cat_id'] == 'HOUSEHOLD')]
+        storeSfoods = sales_train[np.logical_and(sales_train['store_id'] == s, sales_train['cat_id'] == 'FOODS')]
+        shopAndCatList.append(storeShobbies)
+        shopAndCatList.append(storeShousehold)
+        shopAndCatList.append(storeSfoods)
+    
     # LISTE DI DATAFRAME RAGGRUPPATE PER PROPRIETA'
     shopList = [shopCA1, shopCA2, shopCA3, shopCA4, shopTX1, shopTX2, shopTX3, shopWI1, shopWI2, shopWI3]
     stateList = [stateCA, stateTX, stateWI]
@@ -485,6 +495,26 @@ if __name__ == '__main__':
     
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
     autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 30)
+    
+    #%%
+    # Serie temporali per negozio & categoria
+    
+    tsVenditeNegozioAndCat = []
+    
+    print('Sto creando le serie temporali delle vendite per negozio e categoria...', end=' ')
+    for shopAndCat in shopAndCatList:
+        tsVenditeNegozioAndCat.append(pd.Series(data=sumrows(shopAndCat, giorni), 
+                                          index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1913, freq='D')))
+    print('Operazione completata')
+    #%%
+    # Analizziamo le serie temporali per negozio & categoria
+    
+    rollingVenditeNegozioAndCat = []
+    
+    print('Genero le rolling mean per negozio e categoria... ', end=' ')
+    for i in range(len(tsVenditeNegozioAndCat)):
+        rollingVenditeNegozioAndCat.append(rolling(tsVenditeNegozioAndCat[i], w=7))
+    print('Operazione completata')
     
     # %%
     # Calcolo la correlazione fra le serie temporali vendite per stato e per categoria
