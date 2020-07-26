@@ -688,9 +688,34 @@ if __name__ == '__main__':
     
     print('Grafico delle previsioni per le vendite totali')
     
+    # operazioni per estrarre i dati reali da sales_train_evaluation.csv
+    sales_train_evaluation = load_data('./datasets/sales_train_evaluation.csv')
+    stateCAeval = sales_train_evaluation[sales_train_evaluation['state_id'] == 'CA']
+    stateTXeval = sales_train_evaluation[sales_train_evaluation['state_id'] == 'TX']
+    stateWIeval = sales_train_evaluation[sales_train_evaluation['state_id'] == 'WI']
+    stateListEval = [stateCAeval, stateTXeval, stateWIeval]
+    
+    giorni = []
+    for column in stateCAeval:
+        if 'd_' in column:
+            giorni.append(column)
+    
+    tsVenditeStatoEval = []
+    for state in stateListEval:
+        tsVenditeStatoEval.append(pd.Series(data=sumrows(state, giorni), 
+                                          index=pd.date_range(start=pd.Timestamp('2011-01-29'), periods=1941, freq='D')))
+    
+    tsVenditeTotEval = tsVenditeStatoEval[0][:]
+    tsVenditeTotEval += tsVenditeStatoEval[1]
+    tsVenditeTotEval += tsVenditeStatoEval[2]
+    
+    # ultimi 28 giorni
+    tsVenditeTotValSet = tsVenditeTotEval[1913:]
+    
+    # creo il grafico
     tsVenditeTot = tsVenditeStato[0][:]
     tsVenditeTot += tsVenditeStato[1]
     tsVenditeTot += tsVenditeStato[2]
-    plot([tsVenditeTot, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'previsioni'], 'Previsioni con ETS per le vendite totali')
+    plot([tsVenditeTot, tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali')
 
     print('Operazione completata')
