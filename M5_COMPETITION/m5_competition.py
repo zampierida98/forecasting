@@ -604,7 +604,7 @@ if __name__ == '__main__':
         mase = HyndmanAndKoehler_error(ts, model)
         print(f'MASE ETS_DECOMPOSITION_FORECASTING DI {shopNames[j]}_{catNames[ind%3]} = {mase}')
         tsForecastingNegozioAndCat.append(forecasting)
-        if ind%3 == 0:
+        if (ind+1)%3 == 0:
             j += 1
         ind += 1
         
@@ -647,17 +647,19 @@ if __name__ == '__main__':
     
     tsForecastingNegozio = []
     i = 0
+    j = 0
     while i < len(tsForecastingNegozioAndCat):
         tsForecastingNegozio.append(tsForecastingNegozioAndCat[i])
-        tsForecastingNegozio[i] += tsForecastingNegozioAndCat[i+1]
-        tsForecastingNegozio[i] += tsForecastingNegozioAndCat[i+2]
+        tsForecastingNegozio[j] += tsForecastingNegozioAndCat[i+1]
+        tsForecastingNegozio[j] += tsForecastingNegozioAndCat[i+2]
         i = i+3
+        j += 1
     
     print('Operazione completata')
     
     # %%
     
-    print('Sommiamo le previsioni in base al\'appartenenza di un negozio ad uno STATO...')
+    print('Sommiamo le previsioni in base all\'appartenenza di un negozio ad uno STATO...')
     
     ts_Ger_ForecastingStato = []
     state = shopNames[0] + 'ABCD'     # stringa non presente nei nomi dei negozi
