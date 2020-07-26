@@ -593,8 +593,35 @@ if __name__ == '__main__':
     # per NEGOZIO ottenendo "vendite per NEGOZIO" poi raggruppando ulteriormente
     # abbiamo quelle per "STATO" e infine le vendite "TOTALI"
     
-    # parto da NEGOZIO ma dovremmo partire da NEGOZIO & CATEGORIA
+    # partiamo da NEGOZIO & CATEGORIA
+    print('Stime modelli delle previsioni per NEGOZIO & CATEGORIA...')
     
+    ind = 0
+    j = 0
+    tsForecastingNegozioAndCat = []
+    for ts in tsVenditeNegozioAndCat:
+        model,forecasting = ETS_DECOMPOSITION_FORECASTING(ts,periodo=365, h=1941-1913)
+        mase = HyndmanAndKoehler_error(ts, model)
+        print(f'MASE ETS_DECOMPOSITION_FORECASTING DI {shopNames[j]}_{catNames[ind%3]} = {mase}')
+        tsForecastingNegozioAndCat.append(forecasting)
+        if ind%3 == 0:
+            j += 1
+        ind += 1
+        
+    print('Operazione completata')
+    
+    # %%
+    print('Salvo l\'oggetto "tsForecastingNegozioAndCat" su file così da caricarlo in momenti successivi')
+    
+    save_obj(tsForecastingNegozioAndCat, 'tsForecastingNegozioAndCat.pyobj')
+    
+    # %%
+    tsForecastingNegozioAndCat = load_obj('tsForecastingNegozioAndCat.pyobj')
+    
+    print('Caricamento di "tsForecastingNegozioAndCat" completato')
+    
+    # %%
+    """
     print('Stime modelli delle previsioni per NEGOZIO...')
     
     ind = 0
@@ -608,15 +635,25 @@ if __name__ == '__main__':
         
     print('Operazione completata')
     
-    # %%
     print('Salvo l\'oggetto "tsForecastingNegozio" su file così da caricarlo in momenti successivi')
-    
     save_obj(tsForecastingNegozio, 'tsForecastingNegozio.pyobj')
-    
-    # %%
+
     tsForecastingNegozio = load_obj('tsForecastingNegozio.pyobj')
-    
     print('Caricamento di "tsForecastingNegozio" completato')
+    """
+    # %%
+    
+    print("Raggruppiamo le serie temporali per NEGOZIO...")
+    
+    tsForecastingNegozio = []
+    i = 0
+    while i < len(tsForecastingNegozioAndCat):
+        tsForecastingNegozio.append(tsForecastingNegozioAndCat[i])
+        tsForecastingNegozio[i] += tsForecastingNegozioAndCat[i+1]
+        tsForecastingNegozio[i] += tsForecastingNegozioAndCat[i+2]
+        i = i+3
+    
+    print('Operazione completata')
     
     # %%
     
