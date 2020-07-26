@@ -683,3 +683,14 @@ if __name__ == '__main__':
     ts_Ger_ForecastingVenditeTot += ts_Ger_ForecastingStato[2]
     
     print('Operazione completata')
+    
+    # %%
+    
+    print('Grafico delle previsioni per le vendite totali')
+    
+    tsVenditeTot = tsVenditeStato[0][:]
+    tsVenditeTot += tsVenditeStato[1]
+    tsVenditeTot += tsVenditeStato[2]
+    plot([tsVenditeTot, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'previsioni'], 'Previsioni con ETS per le vendite totali')
+
+    print('Operazione completata')
