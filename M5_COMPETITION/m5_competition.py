@@ -38,7 +38,7 @@ plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 #fornire timeserie e rispettiva etichetta in ordine!
-# %%
+
 def plot(timeseries = [], labels = [], titolo=''):
     """
     Parameters
@@ -67,11 +67,17 @@ def plot(timeseries = [], labels = [], titolo=''):
 
 def plot_results(timeseries = [], labels = [], titolo=''):
     """
-    TSC = 'black'-training set
-    VSC = 'black'-validation set
-    FC = 'red'-previsioni
-    MRC = 'green'-model results
-    OLC = 'orange'-other lines
+    TSC (training set color) : 
+        'black'  
+    VSC (validation set color) : 
+        'black'  
+    FC (forecast color) : 
+        'red'    
+    MRC (model results color) : 
+        'green'  
+    OLC (other lines color) : 
+        'orange'
+
     Parameters
     ----------
     timeseries : timeseries[], optional
@@ -97,7 +103,6 @@ def plot_results(timeseries = [], labels = [], titolo=''):
     plt.show(block=False)
     return 
 
-# %%
 def sumrows(dataframe, giorni):
     res = [0]
     for g in giorni:
@@ -117,7 +122,6 @@ def load_data(filename, indexData=False):
         dataframe = pd.read_csv(filename)
     return dataframe
 
-# %%
 def rolling(ts, w, meanOrStd=True):
     '''
     Parameters
@@ -137,7 +141,6 @@ def rolling(ts, w, meanOrStd=True):
         return ts.rolling(window=w).mean()
     return ts.rolling(window=w).std()
 
-#%%
 def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     """
     Parameters
