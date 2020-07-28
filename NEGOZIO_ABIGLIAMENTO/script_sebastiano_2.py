@@ -139,12 +139,15 @@ if __name__ == "__main__":
     plt.show(block=False)
     plt.plot()
     
+    #%%
     # Traccio i grafici ACF e PACF per evidenziare come sia presente una stagionalità
     # con periodo settimanale
     
     result = seasonal_decompose(ts)
-    mt.ac_pac_function(result.seasonal, lags = 50)
-    mt.ac_pac_function(ts, lags = 50)
+    mt.ac_pac_function(result.seasonal, lags = 40)
+    mt.ac_pac_function(ts, lags = 40)
+    mt.ac_pac_function(result.seasonal, lags = 400)
+    mt.ac_pac_function(ts, lags = 400)
     
     #%%
     

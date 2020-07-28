@@ -40,6 +40,19 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 #fornire timeserie e rispettiva etichetta in ordine!
 # %%
 def plot(timeseries = [], labels = [], titolo=''):
+    """
+    Parameters
+    ----------
+    timeseries : TYPE, optional
+        DESCRIPTION. The default is [].
+    labels : TYPE, optional
+        DESCRIPTION. The default is [].
+    titolo : TYPE, optional
+        DESCRIPTION. The default is ''.
+    Returns
+    -------
+    None.
+    """
     plt.figure(figsize=(80, 40), dpi=60)
     plt.title(str(titolo))
     plt.ylabel('Vendite')
@@ -51,6 +64,39 @@ def plot(timeseries = [], labels = [], titolo=''):
     plt.legend(loc='best')
     plt.show(block=False)
     return 
+
+def plot_results(timeseries = [], labels = [], titolo=''):
+    """
+    TSC = 'black'-training set
+    VSC = 'black'-validation set
+    FC = 'red'-previsioni
+    MRC = 'green'-model results
+    OLC = 'orange'-other lines
+    Parameters
+    ----------
+    timeseries : timeseries[], optional
+        DESCRIPTION. The default is []. Order: TSC, VSC, FC, MRC, OLC
+    labels : str[], optional
+        DESCRIPTION. The default is []. Order: TSC, VSC, FC, MRC, OLC
+    titolo : TYPE, optional
+        DESCRIPTION. The default is ''.
+    Returns
+    -------
+    None.
+    """
+    RESCOLORPALETTE = ['black','black','red','green','orange']
+    plt.figure(figsize=(80, 40), dpi=60)
+    plt.title(str(titolo))
+    plt.ylabel('Vendite')
+    plt.xlabel('Data')
+    i=0
+    for serie in timeseries:
+        plt.plot(serie, label = str(labels[i]), color = RESCOLORPALETTE[i])
+        i += 1
+    plt.legend(loc='best')
+    plt.show(block=False)
+    return 
+
 # %%
 def sumrows(dataframe, giorni):
     res = [0]
@@ -121,6 +167,37 @@ def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='black')
     plt.legend(loc = 'best')
     title = 'Funzione di autocorrelazione: ' + str(titleSpec) 
+    plt.title(title)
+    
+def pautocorrelation(ts = [], lags = 20, titleSpec = ''):
+    """
+    Parameters
+    ----------
+    ts : pd.Series
+        Lista di serie temporali
+    lags : integer
+        Ampiezza finestra di visualizzazione del grafico di autocorrelazione
+    titleSpec : str
+        Specifica le serie di cui si calcola l'autocorrelazione (di fatto una 
+        parte del titolo del grafico...)
+    Returns
+    -------
+    None.
+    """
+    pautocor = []
+    for timeserie in ts:
+        pautocor.append(pacf(timeserie, nlags=lags))
+    i = 0
+    plt.figure(figsize=(80, 40), dpi=60)
+    for fun in pautocor:
+        plt.plot(fun, color = COLORPALETTE[i])
+        i += 1
+    #Delimito i tre intervalli
+    plt.axhline(y=0,linestyle='--',color='gray')
+    plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='black')
+    plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='black')
+    plt.legend(loc = 'best')
+    title = 'Funzione di autocorrelazione parziale: ' + str(titleSpec) 
     plt.title(title)
 
 def correlation(ts1, ts2):
@@ -405,6 +482,7 @@ if __name__ == '__main__':
     
     # Calcolo l'autocorrelazioni delle serie di vendite per negozio
     autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400)
+    #pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 60)
 
     # %%
     # Serie temporali per stato
@@ -716,6 +794,6 @@ if __name__ == '__main__':
     tsVenditeTot = tsVenditeStato[0][:]
     tsVenditeTot += tsVenditeStato[1]
     tsVenditeTot += tsVenditeStato[2]
-    plot([tsVenditeTot, tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali')
+    plot_results([tsVenditeTot, tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali')
 
     print('Operazione completata')
