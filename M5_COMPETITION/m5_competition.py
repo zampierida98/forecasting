@@ -800,6 +800,18 @@ if __name__ == '__main__':
     tsVenditeTot = tsVenditeStato[0][:]
     tsVenditeTot += tsVenditeStato[1]
     tsVenditeTot += tsVenditeStato[2]
-    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali')
+    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (bottom-up)')
 
+    print('Operazione completata')
+    
+    # %%
+    
+    print('Forecast diretto sulle vendite totali')
+    
+    model, tsForecastingVenditeTot = ETS_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=365, h=1941-1913)
+    mase = HyndmanAndKoehler_error(tsVenditeTot, model)
+    print(f'MASE ETS_DECOMPOSITION_FORECASTING DI VENDITE TOTALI = {mase}')
+    
+    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (diretto)')
+    
     print('Operazione completata')
