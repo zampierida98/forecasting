@@ -91,13 +91,16 @@ def plot_results(timeseries = [], labels = [], titolo=''):
     None.
     """
     RESCOLORPALETTE = ['black','black','red','green','orange']
-    plt.figure(figsize=(80, 40), dpi=60)
+    plt.figure(figsize=(40, 20), dpi=80)
     plt.title(str(titolo))
     plt.ylabel('Vendite')
     plt.xlabel('Data')
     i=0
     for serie in timeseries:
-        plt.plot(serie, label = str(labels[i]), color = RESCOLORPALETTE[i])
+        if i==1: # validation set
+            plt.plot(serie, label = str(labels[i]), color = RESCOLORPALETTE[i], linestyle = '--')
+        else:
+            plt.plot(serie, label = str(labels[i]), color = RESCOLORPALETTE[i])
         i += 1
     plt.legend(loc='best')
     plt.show(block=False)
@@ -797,6 +800,6 @@ if __name__ == '__main__':
     tsVenditeTot = tsVenditeStato[0][:]
     tsVenditeTot += tsVenditeStato[1]
     tsVenditeTot += tsVenditeStato[2]
-    plot_results([tsVenditeTot, tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali')
+    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali')
 
     print('Operazione completata')
