@@ -770,7 +770,7 @@ if __name__ == '__main__':
     
     # %%
     
-    print('Grafico delle previsioni per le vendite totali')
+    print('Grafico delle previsioni per le vendite totali...')
     
     # operazioni per estrarre i dati reali da sales_train_evaluation.csv
     sales_train_evaluation = load_data('./datasets/sales_train_evaluation.csv')
@@ -802,16 +802,30 @@ if __name__ == '__main__':
     tsVenditeTot += tsVenditeStato[2]
     plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (bottom-up)')
 
+    # metriche di errore
+    errore = ts_Ger_ForecastingVenditeTot - tsVenditeTotValSet
+    #errore.dropna(inplace=True)
+    print('RMSE=%.4f'%np.sqrt((errore ** 2).mean()))
+    print('MAE=%.4f'%(abs(errore)).mean())
+    print('MAPE=%.4f'%(abs(100*errore/tsVenditeTotValSet)).mean())
+
     print('Operazione completata')
     
     # %%
     
-    print('Forecast diretto sulle vendite totali')
+    print('Forecast diretto sulle vendite totali...')
     
     model, tsForecastingVenditeTot = ETS_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=365, h=1941-1913)
     mase = HyndmanAndKoehler_error(tsVenditeTot, model)
     print(f'MASE ETS_DECOMPOSITION_FORECASTING DI VENDITE TOTALI = {mase}')
     
     plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (diretto)')
+    
+    # metriche di errore
+    errore = tsForecastingVenditeTot - tsVenditeTotValSet
+    #errore.dropna(inplace=True)
+    print('RMSE=%.4f'%np.sqrt((errore ** 2).mean()))
+    print('MAE=%.4f'%(abs(errore)).mean())
+    print('MAPE=%.4f'%(abs(100*errore/tsVenditeTotValSet)).mean())
     
     print('Operazione completata')
