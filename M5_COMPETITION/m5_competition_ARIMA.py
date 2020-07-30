@@ -341,9 +341,16 @@ def ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=365, h=100):
             q -= 1
             
     # make prediction. Stesso periodo del validation set!    
-    trend_model_predictions, _, _ = trend_fitted.forecast(steps=h)
-    seasonal_model_predictions, _, _ = seasonal_fitted.forecast(steps=h)
-    residual_model_predictions, _, _ = residual_fitted.forecast(steps=h)
+    trend_model_predictions_array, _, _ = trend_fitted.forecast(steps=h)
+    seasonal_model_predictions_array, _, _ = seasonal_fitted.forecast(steps=h)
+    residual_model_predictions_array, _, _ = residual_fitted.forecast(steps=h)
+    
+    trend_model_predictions = pd.Series(data=seasonal_model_predictions_array,
+                                           index=pd.date_range(start=pd.Timestamp('2016-04-25'), periods=28, freq='D'))
+    seasonal_model_predictions = pd.Series(data=trend_model_predictions_array, 
+                                           index=pd.date_range(start=pd.Timestamp('2016-04-25'), periods=28, freq='D'))
+    residual_model_predictions = pd.Series(data=residual_model_predictions_array, 
+                                           index=pd.date_range(start=pd.Timestamp('2016-04-25'), periods=28, freq='D'))
     
     #Sommo i modelli
     model = trend_fitted.fittedvalues \
@@ -354,7 +361,7 @@ def ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=365, h=100):
     model_forecasting = trend_model_predictions \
                         + seasonal_model_predictions \
                         + residual_model_predictions                       
-   
+
     return (model, model_forecasting)
 
 def MAE_error(ts, model):
@@ -852,7 +859,7 @@ if __name__ == '__main__':
     
     print('Forecast diretto sulle vendite totali...')
     
-    model, tsForecastingVenditeTot = ARIMA_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=365, h=1941-1913)
+    model, tsForecastingVenditeTot = ARIMA_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=7, h=1941-1913)
     mase = HyndmanAndKoehler_error(tsVenditeTot, model)
     print(f'MASE ARIMA_DECOMPOSITION_FORECASTING DI VENDITE TOTALI = {mase}')
     
