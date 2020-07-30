@@ -284,15 +284,15 @@ def p_q_for_ARIMA(timeseries):
     q = 0
    
     for i in range(0, len(PACF)):
-        if PACF[i] <= limite:
+        if PACF[i] <= limite or i >= 6:
             p = i
             break
     for i in range(0, len(ACF)):
-        if ACF[i] <= limite:
+        if ACF[i] <= limite or i >= 6:
             q = i
             break
-    
     return (p,q)
+
 def forza_season(timeseries, season=12):
     """
     Calcola il grado di forza di una presunta stagione nella serie
