@@ -303,11 +303,17 @@ def ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=365, h=100):
     # Uso ARIMA su ogni componente della decomposizione. Cerco gli ordini 
     # di p e q ed applico ARIMA
     p, q = p_q_for_ARIMA(trend)
-    try:
-        trend_model = ARIMA(trend, order = (p, 0, q))
-    except:
-        trend_model = ARIMA(trend, order = (p, 1, q))
-    trend_fitted = trend_model.fit(transparams=False)
+    flag = True
+    while flag:
+        try:
+            try:
+                trend_model = ARIMA(trend, order = (p, 0, q))
+            except:
+                trend_model = ARIMA(trend, order = (p, 1, q))
+            trend_fitted = trend_model.fit(transparams=False)
+            flag = False
+        except:
+            q -= 1
     
     p, q = p_q_for_ARIMA(seasonal)
     flag = True
@@ -335,9 +341,9 @@ def ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=365, h=100):
             q -= 1
             
     # make prediction. Stesso periodo del validation set!    
-    trend_model_predictions = trend_fitted.forecast(steps=h)
-    seasonal_model_predictions = seasonal_fitted.forecast(steps=h)
-    residual_model_predictions = residual_fitted.forecast(steps=h)
+    trend_model_predictions, _, _ = trend_fitted.forecast(steps=h)
+    seasonal_model_predictions, _, _ = seasonal_fitted.forecast(steps=h)
+    residual_model_predictions, _, _ = residual_fitted.forecast(steps=h)
     
     #Sommo i modelli
     model = trend_fitted.fittedvalues \
@@ -350,77 +356,6 @@ def ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=365, h=100):
                         + residual_model_predictions                       
    
     return (model, model_forecasting)
-
-"""
-def ETS_DECOMPOSITION_FORECASTING(ts, periodo=365, due_lati=False, h=100):
-    '''
-    La funzione ETS_FORECASTING calcola, per decomposizione, le previsioni serie temporali
-    ritornando il modello e le previsioni
-    Parameters
-    ----------
-    ts : pd.Series
-        Serie temporale
-    periodo : int, optional
-        Il periodo di stagionalità. The default is 365.
-    due_lati : bool, optional
-        Indica il two_sided della decomposizione. The default is False.
-    
-    h : int, optional
-        Orizzonte di previsione
-    Returns: 
-    -------
-    (model, model_forecasting) ovvero il modello e le previsioni
-    '''
-    decomposition = seasonal_decompose(ts, period=periodo, two_sided=due_lati)
-    
-    trend = decomposition.trend
-    seasonal = decomposition.seasonal
-    residual = decomposition.resid
-    
-    trend.dropna(inplace=True)
-    seasonal.dropna(inplace=True)
-    residual.dropna(inplace=True)    
-
-    # Creiamo dei modelli per trend e seasonal + USO ARIMA PER I RESIDUAL VISTO CHE SONO UNA COMPONENTE STAZION.
-    trend_model = ExponentialSmoothing(trend, trend="add", damped = True, seasonal=None)
-    seasonal_model = ExponentialSmoothing(seasonal, trend=None, seasonal='add', seasonal_periods=periodo)
-
-    # fit model
-    trend_fitted    = trend_model.fit()
-    seasonal_fitted = seasonal_model.fit()
-    
-    # ARIMA SU RESIDUAL (PER FORZA)
-    flag = True
-    q = 5
-    residual_fitted = None
-    while flag:
-        try:    
-            residual_model = ARIMA(residual, order=(5, 0, q))
-            #fit model
-            residual_fitted = residual_model.fit()
-            flag = False
-        except:
-            q -= 1
-            
-    
-    
-    # make prediction. Stesso periodo del validation set!    
-    trend_model_predictions = trend_fitted.forecast(steps=h)
-    seasonal_model_predictions = seasonal_fitted.forecast(steps=h)
-    residual_model_predictions, _, _ = residual_fitted.forecast(steps=h)
-    
-    #Sommo i modelli
-    model = trend_fitted.fittedvalues \
-                + seasonal_fitted.fittedvalues \
-                + residual_fitted.fittedvalues
-
-    #Sommo le previsioni
-    model_forecasting = trend_model_predictions \
-                        + seasonal_model_predictions \
-                        + residual_model_predictions                       
-    model_forecasting.dropna(inplace=True)
-    return (model, model_forecasting)
-"""
 
 def MAE_error(ts, model):
     errore = model - ts
@@ -917,9 +852,9 @@ if __name__ == '__main__':
     
     print('Forecast diretto sulle vendite totali...')
     
-    model, tsForecastingVenditeTot = ETS_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=365, h=1941-1913)
+    model, tsForecastingVenditeTot = ARIMA_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=365, h=1941-1913)
     mase = HyndmanAndKoehler_error(tsVenditeTot, model)
-    print(f'MASE ETS_DECOMPOSITION_FORECASTING DI VENDITE TOTALI = {mase}')
+    print(f'MASE ARIMA_DECOMPOSITION_FORECASTING DI VENDITE TOTALI = {mase}')
     
     plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (diretto)')
     
