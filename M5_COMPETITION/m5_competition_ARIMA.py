@@ -364,6 +364,108 @@ def ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=365, h=100):
 
     return (model, model_forecasting)
 
+def find_best_model(ts, d=0, max_p=6, max_q=5):
+    '''
+    È la funzione che cerca il miglior modello ARMA per una serie temporale.
+    Il miglior modello è colui che minimizza il grado AIC
+    Parameters
+    ----------
+    ts : pandas.Series
+        Serie temporale
+    d : int, optional
+        d di ARIMA(p,d,q). The default is 0.
+    max_p : int, optional
+        max valore di cerca per p. The default is 5.
+    max_q : int, optional
+        max valore di cerca per q. The default is 5.
+    Returns 
+    -------
+    (p,d, result_model) : (int, int, ARIMAResults)
+    '''
+    min_aic = 2**32; p = 0; q = 0
+    result_model = None
+    for i in range(0, max_p):
+        for j in range(0, max_q):
+            try:
+                print('order(%d,%d,%d)'%(i,d,j))
+                model = ARIMA(ts, order=(i, d, j)).fit(disp=-1)
+                if (model.aic < min_aic):
+                    p=i
+                    q=j
+                    min_aic=model.aic
+                    result_model=model
+            except:
+                continue
+    return (p,q, result_model)
+
+
+def ARIMA_DECOMPOSITION_FORECASTING_2(ts, periodo=365, h=100):
+    '''
+    La funzione ARIMA_FORECASTING calcola le previsioni delle serie temporali
+    ritornando il modello e le previsioni
+    Parameters
+    ----------
+    ts : pd.Series
+        Serie temporale
+    periodo : int, optional
+        Il periodo di stagionalità. The default is 365.
+    h : int, optional
+        Orizzonte di previsione. The default is 100.
+    Returns: 
+    -------
+    (model, model_forecasting) ovvero il modello e le previsioni
+    '''
+    decomposition = seasonal_decompose(ts, period=periodo)
+    
+    # salvo le parti decomposte in variabili 
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+    
+    # rimuovo i valori null
+    trend.dropna(inplace=True)
+    seasonal.dropna(inplace=True)
+    residual.dropna(inplace=True)    
+
+    _,_,trend_fitted = find_best_model(trend, d=1)
+    _,_,seasonal_fitted = find_best_model(seasonal, d=0)
+        
+    flag = True
+    q = 5
+    residual_fitted = None
+    while flag:
+        try:    
+            residual_model = ARIMA(residual, order=(5, 0, q))
+            #fit model
+            residual_fitted = residual_model.fit()
+            flag = False
+        except:
+            q -= 1
+            
+    # make prediction. Stesso periodo del validation set!    
+    trend_model_predictions_array, _, _ = trend_fitted.forecast(steps=h)
+    seasonal_model_predictions_array, _, _ = seasonal_fitted.forecast(steps=h)
+    residual_model_predictions_array, _, _ = residual_fitted.forecast(steps=h)
+    
+    trend_model_predictions = pd.Series(data=seasonal_model_predictions_array,
+                                           index=pd.date_range(start=pd.Timestamp('2016-04-25'), periods=28, freq='D'))
+    seasonal_model_predictions = pd.Series(data=trend_model_predictions_array, 
+                                           index=pd.date_range(start=pd.Timestamp('2016-04-25'), periods=28, freq='D'))
+    residual_model_predictions = pd.Series(data=residual_model_predictions_array, 
+                                           index=pd.date_range(start=pd.Timestamp('2016-04-25'), periods=28, freq='D'))
+    
+    #Sommo i modelli
+    model = trend_fitted.fittedvalues \
+                + seasonal_fitted.fittedvalues \
+                + residual_fitted.fittedvalues
+
+    #Sommo le previsioni
+    model_forecasting = trend_model_predictions \
+                        + seasonal_model_predictions \
+                        + residual_model_predictions                       
+
+    return (model, model_forecasting)
+
 def MAE_error(ts, model):
     errore = model - ts
     errore.dropna(inplace=True)
@@ -648,7 +750,7 @@ if __name__ == '__main__':
     
     # %%
     # Calcolo la correlazione fra le serie temporali vendite per stato e per categoria
-    
+    '''
     ind = 0
     for s in tsVenditeStato:
         ind2 = 0
@@ -695,7 +797,7 @@ if __name__ == '__main__':
         print(f'MASE ARIMA_FORECASTING DI {stateNames[ind]} = {mase}')
         ind+=1
         
-    print('Operazione completata')
+    print('Operazione completata')'''
     
     # %%
     
@@ -722,6 +824,7 @@ if __name__ == '__main__':
     # abbiamo quelle per "STATO" e infine le vendite "TOTALI"
     
     # partiamo da NEGOZIO & CATEGORIA
+    
     print('Stime modelli delle previsioni per NEGOZIO & CATEGORIA con ARIMA...')
     
     ind = 0
@@ -859,9 +962,9 @@ if __name__ == '__main__':
     
     print('Forecast diretto sulle vendite totali...')
     
-    model, tsForecastingVenditeTot = ARIMA_DECOMPOSITION_FORECASTING(tsVenditeTot, periodo=7, h=1941-1913)
+    model, tsForecastingVenditeTot = ARIMA_DECOMPOSITION_FORECASTING_2(tsVenditeTot, periodo=7, h=1941-1913)
     mase = HyndmanAndKoehler_error(tsVenditeTot, model)
-    print(f'MASE ARIMA_DECOMPOSITION_FORECASTING DI VENDITE TOTALI = {mase}')
+    print(f'MASE ARIMA_DECOMPOSITION_FORECASTING_2 DI VENDITE TOTALI = {mase}')
     
     plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (diretto)')
     
