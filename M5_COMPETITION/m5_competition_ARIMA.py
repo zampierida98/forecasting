@@ -831,7 +831,7 @@ if __name__ == '__main__':
     j = 0
     tsForecastingNegozioAndCat = []
     for ts in tsVenditeNegozioAndCat:
-        model,forecasting = ARIMA_DECOMPOSITION_FORECASTING(ts, periodo=7, h=1941-1913)
+        model,forecasting = ARIMA_DECOMPOSITION_FORECASTING_2(ts, periodo=7, h=1941-1913)
         mase = HyndmanAndKoehler_error(ts, model)
         print(f'MASE ARIMA_DECOMPOSITION_FORECASTING DI {shopNames[j]}_{catNames[ind%3]} = {mase}')
         tsForecastingNegozioAndCat.append(forecasting)
@@ -844,10 +844,10 @@ if __name__ == '__main__':
     # %%
     print('Salvo l\'oggetto "tsForecastingNegozioAndCatARIMA" su file così da caricarlo in momenti successivi')
     
-    save_obj(tsForecastingNegozioAndCat, 'tsForecastingNegozioAndCatARIMA.pyobj')
+    save_obj(tsForecastingNegozioAndCat, 'tsForecastingNegozioAndCatARIMA_2.pyobj')
     
     # %%
-    tsForecastingNegozioAndCat = load_obj('tsForecastingNegozioAndCatARIMA.pyobj')
+    tsForecastingNegozioAndCat = load_obj('tsForecastingNegozioAndCatARIMA_2.pyobj')
     
     print('Caricamento di "tsForecastingNegozioAndCatARIMA" completato')
     
