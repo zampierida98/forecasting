@@ -947,7 +947,7 @@ if __name__ == '__main__':
     tsVenditeTot = tsVenditeStato[0][:]
     tsVenditeTot += tsVenditeStato[1]
     tsVenditeTot += tsVenditeStato[2]
-    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (bottom-up)')
+    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ARIMA (miglior modello) per le vendite totali (bottom-up)')
 
     # metriche di errore
     errore = ts_Ger_ForecastingVenditeTot - tsVenditeTotValSet
@@ -966,7 +966,7 @@ if __name__ == '__main__':
     mase = HyndmanAndKoehler_error(tsVenditeTot, model)
     print(f'MASE ARIMA_DECOMPOSITION_FORECASTING_2 DI VENDITE TOTALI = {mase}')
     
-    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ETS per le vendite totali (diretto)')
+    plot_results([tsVenditeTot['2015-01-01':], tsVenditeTotValSet, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'previsioni'], 'Previsioni con ARIMA (miglior modello) per le vendite totali (diretto)')
     
     # metriche di errore
     errore = tsForecastingVenditeTot - tsVenditeTotValSet
