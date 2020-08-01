@@ -975,4 +975,7 @@ if __name__ == '__main__':
     print('MAE=%.4f'%(abs(errore)).mean())
     print('MAPE=%.4f'%(abs(100*errore/tsVenditeTotValSet)).mean())
     
+    # grafico comparativo
+    plot_results([tsVenditeTot['2016-03-01':], tsVenditeTotValSet, ts_Ger_ForecastingVenditeTot, tsForecastingVenditeTot], ['vendite totali', 'set di valutazione', 'predizione con aggregazione', 'predizione sul totale'], 'Previsioni con ARIMA (miglior modello) per le vendite totali (comparazione)')
+    
     print('Operazione completata')
