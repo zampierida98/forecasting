@@ -193,7 +193,7 @@ def pautocorrelation(ts = [], lags = 20, titleSpec = '', logbool = False):
     """
     pautocor = []
     for timeserie in ts:
-        pautocor.append(pacf(timeserie, nlags=lags))
+        pautocor.append(pacf(timeserie, nlags=lags, method = 'ols'))
     i = 0
     plt.figure(figsize=(80, 40), dpi=60)
     if logbool:
@@ -493,7 +493,7 @@ if __name__ == '__main__':
     autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 40)
     autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400)
     pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 40)
-    pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400, logbool = True)
+    pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400)
 
     # %%
     # Serie temporali per stato
