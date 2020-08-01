@@ -17,6 +17,7 @@ import mytools as mt
 import datetime as dt
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
+import itertools
 
 if __name__ == "__main__":
 
@@ -143,120 +144,216 @@ if __name__ == "__main__":
     # Traccio i grafici ACF e PACF per evidenziare come sia presente una stagionalità
     # con periodo settimanale
     
-    result = seasonal_decompose(ts)
+    result = seasonal_decompose(train,  model = 'additive', period = year)
+    
     mt.ac_pac_function(result.seasonal, lags = 40)
     mt.ac_pac_function(ts, lags = 40)
-    mt.ac_pac_function(result.seasonal, lags = 400)
-    mt.ac_pac_function(ts, lags = 400)
-    
-    #%%
-    
-    # Calcolo la serie differenziata con finestra di 7 giorni e ne traccio il grafico
-    # per vedere se c'è stato un miglioramento nella stazionarietà della serie
-    
-    my_ts = train.diff(periods=7)  
-    my_ts.dropna(inplace = True)
-    
-    rolmean = my_ts.rolling(window=week).mean()
-    rolstd = my_ts.rolling(window=week).std()
-    
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title('Moving average e std del train set differenziato')
-    plt.ylabel('#Maglie vendute')
-    plt.xlabel('Data')
-    plt.plot(my_ts, label="training set", color=TSC)
-    plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=2)
-    plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=2)
-    plt.legend(loc='best')
-    plt.show(block=False)
-    plt.plot()
+    mt.ac_pac_function(result.seasonal, lags = 100)
+    mt.ac_pac_function(ts, lags = 100)
     
     # Traccio il grafico delle funzioni di correlazione e autocorrelazione parziale per
     # estrarre i pesi p e q da usare nel modello arima
     
-    mt.ac_pac_function(my_ts, lags = 100)
-    p, q = 4, 6
+    mt.ac_pac_function(train, lags = 100)
 
     #%%
 
-    # calcolo la componente stagionale che mi servirà per tornare nella forma iniziale
-
-    my_stagionalita = train.rolling(window=7).mean()
-    my_stagionalita.dropna(inplace= True)
+    trend = result.trend
+    seasonality = result.seasonal
+    residuals = result.resid
     
-    model = ARIMA(my_ts, order=(p, 0, q))
-    results_ARIMA = model.fit(disp=0)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(trend)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(residuals)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(seasonality)
     
-    # Torno alla forma iniziale aggiungendo la componente stagionale
+    trend.dropna(inplace = True)
+    seasonality.dropna(inplace = True)
+    residuals.dropna(inplace = True)
     
-    my_arima = pd.Series(results_ARIMA.fittedvalues, copy=True)
-    original_scale = my_arima + my_stagionalita
+    mt.ac_pac_function(trend, lags = 50)
+    mt.ac_pac_function(residuals, lags = 50)
+    mt.ac_pac_function(seasonality, lags = 50)
     
-    # sistemo alcuni "errori del modello". Livello a 0 tutto ciò che scende
-    # sotto (non ci possono essere "vendite negative")
+    """
+    p = q = range(0, 7)
+    d = range(0, 2)
+    pdq = list(itertools.product(p, d, q))
     
-    for i in range(1, len(original_scale)):
-        if original_scale[i] < 0:
-            original_scale[i] = 0
+    for param in pdq:
+        try:
+            mod = ARIMA(train, order=param)
+            results = mod.fit()
+            print('ARIMA{} - AIC:{}'.format(param, results.aic))
+        except:
+            continue
+    """
+        
+    """
+    ARIMA(0, 0, 0) - AIC:15812.293282757695
+    ARIMA(0, 0, 1) - AIC:15110.175017936563
+    ARIMA(0, 0, 2) - AIC:14976.100385185735
+    ARIMA(0, 0, 3) - AIC:14902.075594298336
+    ARIMA(0, 0, 4) - AIC:14818.340425486223
+    ARIMA(0, 0, 5) - AIC:14818.493394782914
+    ARIMA(0, 0, 6) - AIC:14782.926407316168
+    ARIMA(0, 1, 0) - AIC:15194.933774743744
+    ARIMA(0, 1, 1) - AIC:14725.377087929124
+    ARIMA(0, 1, 2) - AIC:14573.081743822604
+    ARIMA(0, 1, 3) - AIC:14572.28801608449
+    ARIMA(0, 1, 4) - AIC:14529.217299006177
+    ARIMA(0, 1, 5) - AIC:14524.533751990484
+    ARIMA(0, 1, 6) - AIC:14495.503409426154
+    ARIMA(1, 0, 0) - AIC:14826.876641323724
+    ARIMA(1, 0, 1) - AIC:14710.802715996979
+    ARIMA(1, 0, 2) - AIC:14564.11660577477
+    ARIMA(1, 0, 3) - AIC:14562.789396719543
+    ARIMA(1, 0, 4) - AIC:14511.268794083848
+    ARIMA(1, 0, 5) - AIC:14502.313150259186
+    ARIMA(1, 0, 6) - AIC:14463.682148810423
+    ARIMA(1, 1, 0) - AIC:15072.845865002868
+    ARIMA(1, 1, 1) - AIC:14609.346722413444
+    ARIMA(1, 1, 2) - AIC:14573.46794587272
+    ARIMA(1, 1, 3) - AIC:14538.90396563551
+    ARIMA(1, 1, 4) - AIC:14520.926139638463
+    ARIMA(1, 1, 5) - AIC:14522.768742094047
+    ARIMA(1, 1, 6) - AIC:14488.702784481613
+    ARIMA(2, 0, 0) - AIC:14814.727963779227
+    ARIMA(2, 0, 1) - AIC:14600.326244572903
+    ARIMA(2, 0, 2) - AIC:14564.241370858474
+    ARIMA(2, 0, 3) - AIC:14515.045056685789
+    ARIMA(2, 0, 4) - AIC:14495.203493317003
+    ARIMA(2, 0, 5) - AIC:14496.76390975958
+    ARIMA(2, 0, 6) - AIC:14449.25376935316
+    ARIMA(2, 1, 0) - AIC:14883.728140971936
+    ARIMA(2, 1, 1) - AIC:14556.39295676736
+    ARIMA(2, 1, 2) - AIC:14486.298297077336
+    ARIMA(2, 1, 3) - AIC:14269.105834457096
+    ARIMA(2, 1, 4) - AIC:14388.497293762091
+    ARIMA(2, 1, 5) - AIC:14210.115906164023
+    ARIMA(2, 1, 6) - AIC:14208.172174558258
+    ARIMA(3, 0, 0) - AIC:14735.67465648305
+    ARIMA(3, 0, 1) - AIC:14546.424114798589
+    ARIMA(3, 0, 2) - AIC:14457.898280334977
+    ARIMA(3, 0, 3) - AIC:14535.603775969017
+        HessianInversionWarning: Inverting hessian failed, no bse or cov_params available
+    ARIMA(3, 0, 4) - AIC:14378.650199866272
+    ARIMA(3, 0, 5) - AIC:14189.33367244909
+    ARIMA(3, 0, 6) - AIC:14189.99108798486
+    ARIMA(3, 1, 0) - AIC:14815.37535035214
+    ARIMA(3, 1, 1) - AIC:14550.74514601448
+    ARIMA(3, 1, 2) - AIC:14474.620357987773
+    ARIMA(3, 1, 3) - AIC:14394.552521761228
+    ARIMA(3, 1, 4) - AIC:14245.82142372298
+    ARIMA(3, 1, 5) - AIC:14210.989615817596
+    ARIMA(3, 1, 6) - AIC:14204.416696136508
+    ARIMA(4, 0, 0) - AIC:14710.00081633976
+    ARIMA(4, 0, 1) - AIC:14540.416820930493
+    ARIMA(4, 0, 2) - AIC:14445.146760640448
+    ARIMA(4, 0, 3) - AIC:14385.32268738848
+    ARIMA(4, 0, 4) - AIC:14374.890583584542
+    ARIMA(4, 0, 5) - AIC:14190.90205976865
+    ARIMA(4, 0, 6) - AIC:14192.315541040422
+    ARIMA(4, 1, 0) - AIC:14761.435824666602
+    ARIMA(4, 1, 1) - AIC:14504.058145111116
+    ARIMA(4, 1, 2) - AIC:14286.126951191638
+    ARIMA(4, 1, 3) - AIC:14176.945063197609
+    ARIMA(4, 1, 4) - AIC:14176.068302926751
+    ARIMA(4, 1, 5) - AIC:13985.05312971261
+    ARIMA(4, 1, 6) - AIC:13986.98418457412
+    ARIMA(5, 0, 0) - AIC:14685.229385975847
+    ARIMA(5, 0, 1) - AIC:14493.419631600073
+    ARIMA(5, 0, 2) - AIC:14237.699893829078
+    ARIMA(5, 0, 3) - AIC:14158.46088278529
+    ARIMA(5, 0, 4) - AIC:14153.82429377347
+    ARIMA(5, 0, 5) - AIC:13970.003193852966
+    ARIMA(5, 0, 6) - AIC:13971.388702652825
+    ARIMA(5, 1, 0) - AIC:14475.257945875694
+    ARIMA(5, 1, 1) - AIC:14325.083222038578
+    ARIMA(5, 1, 2) - AIC:14146.886032872542
+    ARIMA(5, 1, 3) - AIC:14148.69182646366
+    ARIMA(5, 1, 4) - AIC:14127.056295571168
+    ARIMA(5, 1, 5) - AIC:13986.987401023232
+    ARIMA(5, 1, 6) - AIC:13984.432500223456
+    ARIMA(6, 0, 0) - AIC:14444.713695793676
+    ARIMA(6, 0, 1) - AIC:14314.882105193448
+    ARIMA(6, 0, 2) - AIC:14123.450053333312
+    ARIMA(6, 0, 3) - AIC:14124.12489016474
+    ARIMA(6, 0, 4) - AIC:14079.26022800937
+    ARIMA(6, 0, 5) - AIC:13971.443897019653
+    ARIMA(6, 0, 6) - AIC:13969.760128446998 <--- scelgo questo
+    ARIMA(6, 1, 0) - AIC:14176.270673755089
+    ARIMA(6, 1, 1) - AIC:14170.659250033319
+    ARIMA(6, 1, 2) - AIC:14158.819364118975
+    ARIMA(6, 1, 3) - AIC:14133.280103030385
+    ARIMA(6, 1, 4) - AIC:14052.196075133104
+    ARIMA(6, 1, 5) - AIC:13988.659787201963
+    ARIMA(6, 1, 6) - AIC:13985.037311157492
+    """
+    """
+    model = ARIMA(train, order=(6, 0, 6))
+    fitted = model.fit()
+    
+    #fitted.summary()
+    
+    predictions, _, confidence_int = fitted.forecast(steps = len(valid))
+    ts_predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
+    """
+    #%%
+    
+    predictions_seasonality = []
+    for i in range (0, len(valid)):
+        if i < 365:
+            predictions_seasonality.append(seasonality[len(seasonality)-365+i])
+        else:
+            predictions_seasonality.append(predictions_seasonality[i%365])
+      
+    #%%  
+      
+    model_trend = ARIMA(trend, order=(5, 0, 5))
+    model_residuals = ARIMA(residuals, order=(3, 0, 3))
+    
+    fitted_trend = model_trend.fit(disp=0)
+    fitted_residuals = model_residuals.fit(disp=0)
+    
+    # Torno alla forma iniziale sommando le componenti
+    
+    model = fitted_trend.fittedvalues + fitted_residuals.fittedvalues + seasonality
             
     # Calcolo le previsioni (per un periodo come valid, con cui fare il confronto
     # per determinarne la bontà)
 
-    predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
-    predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
-    predictions.dropna(inplace=True) 
+    predictions_trend, _, _ = fitted_trend.forecast(steps = int(len(valid)))
+    predictions_residuals, _, _ = fitted_residuals.forecast(steps = int(len(valid)))
     
-    # Plot del modello ARIMA con la serie per il training differenziata
+    ts_predictions_trend = pd.Series(predictions_trend, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
+    ts_predictions_seasonality = pd.Series(predictions_seasonality, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
+    ts_predictions_residuals = pd.Series(predictions_residuals, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
     
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.plot(my_ts, label = "Training set", color = 'black')
-    plt.plot(my_arima, color='green', label='ARIMA')
-    plt.plot(predictions, color='red', label='previsioni')
-    plt.title("Arima (%d, 0, %d)"% (p, q))
-    plt.legend(loc='best');
+    ts_predictions_trend.dropna(inplace=True) 
+    ts_predictions_seasonality.dropna(inplace=True) 
+    ts_predictions_residuals.dropna(inplace=True) 
+    
+    predictions = ts_predictions_residuals + ts_predictions_seasonality + ts_predictions_trend
     
     # Plot del modello ARIMA con la serie per il training in scala originale
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label = "Training set", color = 'black')
-    plt.plot(original_scale, color='green', label='ARIMA')
-    plt.title("Arima (%d, 0, %d)"% (p, q))
+    plt.plot(fitted.fittedvalues, color='green', label='ARIMA')
+    plt.plot(valid, color='black', linestyle='--')
+    plt.title("Arima")
     plt.legend(loc='best');
-    
-    # Traccio il grafico delle previsioni in scala originale
-    
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.plot(train, label='training set', color = 'black')
-    plt.plot(valid, color='black', label='validation set', linestyle = '--')
-    plt.plot(original_scale, color = 'green', label = 'risultati di ARIMA')
-    
-    #%%
     
     # Per ottenere le previsioni in scala originale devo aggiungere la componente stagionale
     # (settimanale) che posso ottenere con una media esponenziale o un "approccio naive" ossia
     # prendendo la stagionalità di k osservazioni passate
-    
-    """forecast = predictions+ts.rolling(window=week).mean()"""
-    
-    seasonal_factor = pd.Series.copy(valid)
-    for i in range(0, len(valid)):
-        seasonal_factor[i] = train[len(train)-1]
-        
-    seasonal_factor.dropna(inplace=True)
-        
-    forecast =pd.Series.copy(predictions)    
-    for i in range(0, len(valid)):
-        forecast[i] += seasonal_factor[i]
-                                       
-    forecast.dropna(inplace = True)
-
-    for i in range(1, len(forecast)):
-        if forecast[i] < 0:
-            forecast[i] = 0
      
-    ci = 1.96 * np.std(forecast)/np.mean(forecast)
-    plt.plot(forecast, color="red", label='previsione con ARIMA')
-    plt.title('Previsioni con ARIMA('+str(p)+',0,'+str(q)+')')
+    ci = 1.96 * np.std(predictions)/np.mean(predictions)
+    plt.plot(predictions, color="red", label='previsione con ARIMA')
+    plt.title('Previsioni con ARIMA')
     plt.xlabel('Data')
     plt.ylabel('#Maglie vendute')
     plt.legend(loc='best')
@@ -269,4 +366,7 @@ if __name__ == "__main__":
     
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
 
-    
+#%%
+
+    plt.plot(seasonality)
+    plt.plot(ts_predictions_seasonality)
