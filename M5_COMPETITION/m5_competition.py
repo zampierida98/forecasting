@@ -7,6 +7,7 @@ Created on Mon Jul 13 15:51:56 2020
 
 import datetime
 import matplotlib.pylab as plt
+import matplotlib.pyplot as pplt
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -175,7 +176,7 @@ def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     title = 'Funzione di autocorrelazione: ' + str(titleSpec) 
     plt.title(title)
     
-def pautocorrelation(ts = [], lags = 20, titleSpec = ''):
+def pautocorrelation(ts = [], lags = 20, titleSpec = '', logbool = False):
     """
     Parameters
     ----------
@@ -195,6 +196,8 @@ def pautocorrelation(ts = [], lags = 20, titleSpec = ''):
         pautocor.append(pacf(timeserie, nlags=lags))
     i = 0
     plt.figure(figsize=(80, 40), dpi=60)
+    if logbool:
+        pplt.yscale('log')
     for fun in pautocor:
         plt.plot(fun, color = COLORPALETTE[i])
         i += 1
@@ -487,8 +490,10 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per negozio
+    autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 40)
     autocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400)
-    #pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 60)
+    pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 40)
+    pautocorrelation(tsVenditeNegozio, titleSpec = "Vendite per negozio", lags = 400, logbool = True)
 
     # %%
     # Serie temporali per stato
@@ -518,7 +523,10 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per stato
+    autocorrelation(tsVenditeStato, titleSpec = "Vendite per stato", lags = 40)
     autocorrelation(tsVenditeStato, titleSpec = "Vendite per stato", lags = 400)
+    pautocorrelation(tsVenditeStato, titleSpec = "Vendite per stato", lags = 40)
+    pautocorrelation(tsVenditeStato, titleSpec = "Vendite per stato", lags = 400)
     
     # %%
     # Serie temporali per categoria
@@ -548,7 +556,10 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
+    autocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 40)
     autocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 400)
+    pautocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 40)
+    pautocorrelation(tsVenditeCat, titleSpec = "Vendite per categoria", lags = 400)
 
     #%%
     # Serie temporali per stato & categoria
@@ -578,7 +589,10 @@ if __name__ == '__main__':
     """
     
     # Calcolo l'autocorrelazioni delle serie di vendite per categoria
-    autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 30)
+    autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 40)
+    autocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 400)
+    pautocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 40)
+    pautocorrelation(tsVenditeStatoAndCat, titleSpec = "Vendite per stato e categoria", lags = 400)
     
     #%%
     # Serie temporali per negozio & categoria
