@@ -160,7 +160,7 @@ if __name__ == "__main__":
     # Decompongo la serie
     # con periodo di 365 o 183 giorni (year e half_year)
     
-    result = seasonal_decompose(train,  model = 'additive', period = season)
+    result = seasonal_decompose(train,  model = 'additive', period = season, extrapolate_trend='freq')
 
     #%%
 
@@ -185,27 +185,66 @@ if __name__ == "__main__":
     mt.ac_pac_function(trend, lags = 50)
     mt.ac_pac_function(residuals, lags = 50)
     
-    """
-    p = q = range(0, 7)
+    p = q = range(0, 6)
     d = range(0, 2)
     pdq = list(itertools.product(p, d, q))
     
+    #%%
+    
+    # genero le previsioni della componente trend
+    
+    best = None
+    best_AIC = None
     for param in pdq:
         try:
-            mod = ARIMA(train, order=param)
+            mod = ARIMA(trend, order=param)
             results = mod.fit()
             print('ARIMA{} - AIC:{}'.format(param, results.aic))
+            if best is None:
+                best = param
+                best_AIC = results.aic
+            elif results.aic < best_AIC:
+                best_AIC = results.aic
+                best = param
         except:
             continue
         
-    model = ARIMA(train, order=(6, 0, 6))
-    fitted = model.fit()
+    trend_model = ARIMA(trend, order=best)
+    trend_fitted = trend_model.fit()
     
     #fitted.summary()
     
-    predictions, _, confidence_int = fitted.forecast(steps = len(valid))
-    ts_predictions = pd.Series(predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
-    """
+    trend_predictions, _, confidence_int = trend_fitted.forecast(steps = len(valid))
+    ts_trend_predictions = pd.Series(trend_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
+
+    #%%
+    
+    # genero le previsioni della componente residuals
+    
+    best = None
+    best_AIC = None
+    for param in pdq:
+        try:
+            mod = ARIMA(residuals, order=param)
+            results = mod.fit()
+            print('ARIMA{} - AIC:{}'.format(param, results.aic))
+            if best is None:
+                best = param
+                best_AIC = results.aic
+            elif results.aic < best_AIC:
+                best_AIC = results.aic
+                best = param
+        except:
+            continue
+        
+    residuals_model = ARIMA(residuals, order=best)
+    residuals_fitted = residuals_model.fit()
+    
+    #fitted.summary()
+    
+    residuals_predictions, _, confidence_int = residuals_fitted.forecast(steps = len(valid))
+    ts_residuals_predictions = pd.Series(residuals_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
+
     #%%
     
     # genere le previsioni della componente stagionale usando il metodo seasonal naive
@@ -227,31 +266,17 @@ if __name__ == "__main__":
     plt.legend(loc='best');
       
     #%%  
-      
-    model_trend = ARIMA(trend, order=(5, 0, 5))
-    model_residuals = ARIMA(residuals, order=(3, 0, 3))
+
     
-    fitted_trend = model_trend.fit(disp=0)
-    fitted_residuals = model_residuals.fit(disp=0)
     
     # Torno alla forma iniziale sommando le componenti
     
-    model = fitted_trend.fittedvalues + fitted_residuals.fittedvalues + seasonality
+    model = trend_fitted.fittedvalues + residuals_fitted.fittedvalues + seasonality
             
     # Calcolo le previsioni (per un periodo come valid, con cui fare il confronto
     # per determinarne la bontà)
-
-    predictions_trend, _, _ = fitted_trend.forecast(steps = int(len(valid)))
-    predictions_residuals, _, _ = fitted_residuals.forecast(steps = int(len(valid)))
     
-    ts_predictions_trend = pd.Series(predictions_trend, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
-    ts_predictions_residuals = pd.Series(predictions_residuals, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
-    
-    ts_predictions_trend.dropna(inplace=True) 
-    ts_predictions_seasonality.dropna(inplace=True) 
-    ts_predictions_residuals.dropna(inplace=True) 
-    
-    predictions = ts_predictions_residuals + ts_predictions_seasonality + ts_predictions_trend
+    predictions = ts_residuals_predictions + ts_predictions_seasonality + ts_trend_predictions
     
     for i in range (0, len(model)):
         if model[i] < 0:
@@ -282,7 +307,7 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     print(predictions.head())
 
-#%%
+    #%%
 
     errore = predictions - valid
     errore.dropna(inplace=True)
