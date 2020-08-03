@@ -208,6 +208,8 @@ if __name__ == "__main__":
                 best = param
         except:
             continue
+    
+    print('Gli ordini scelti per il trend sono {} con un AIC di {}'.format(best, best_AIC))
         
     trend_model = ARIMA(trend, order=best)
     trend_fitted = trend_model.fit()
@@ -216,6 +218,11 @@ if __name__ == "__main__":
     
     trend_predictions, _, confidence_int = trend_fitted.forecast(steps = len(valid))
     ts_trend_predictions = pd.Series(trend_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
+
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(trend, label='trend')
+    plt.plot(ts_trend_predictions, label='previsione trend')
+    plt.legend(loc = 'best')
 
     #%%
     
@@ -237,6 +244,8 @@ if __name__ == "__main__":
         except:
             continue
         
+    print('Gli ordini scelti per i residui sono {} con un AIC di {}'.format(best, best_AIC))
+        
     residuals_model = ARIMA(residuals, order=best)
     residuals_fitted = residuals_model.fit()
     
@@ -245,6 +254,11 @@ if __name__ == "__main__":
     residuals_predictions, _, confidence_int = residuals_fitted.forecast(steps = len(valid))
     ts_residuals_predictions = pd.Series(residuals_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
 
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(residuals, label='residui')
+    plt.plot(ts_residuals_predictions, label='previsione residui')
+    plt.legend(loc = 'best')
+    
     #%%
     
     # genere le previsioni della componente stagionale usando il metodo seasonal naive
@@ -290,9 +304,8 @@ if __name__ == "__main__":
     
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(train, label = "Training set", color = 'black')
-    plt.plot(model, color='green', label='ARIMA')
-    plt.plot(valid, color='black', linestyle='--')
-    plt.title("Arima")
+    plt.plot(model, color='green', label='modello')
+    plt.plot(valid, color='black', linestyle='--', label = 'Validation set')
     plt.legend(loc='best');
     
     # Per ottenere le previsioni in scala originale devo aggiungere la componente stagionale
@@ -300,8 +313,7 @@ if __name__ == "__main__":
     # prendendo la stagionalità di k osservazioni passate
      
     ci = 1.96 * np.std(predictions)/np.mean(predictions)
-    plt.plot(predictions, color="red", label='previsione con ARIMA')
-    plt.title('Previsioni con ARIMA')
+    plt.plot(predictions, color="red", label='previsioni')
     plt.xlabel('Data')
     plt.ylabel('#Maglie vendute')
     plt.legend(loc='best')
@@ -313,3 +325,4 @@ if __name__ == "__main__":
     errore.dropna(inplace=True)
     
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
+    print('Calcoliamo MSE: %.4f'%(sum((predictions-valid)**2)/len(valid)))
