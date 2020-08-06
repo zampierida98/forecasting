@@ -66,12 +66,6 @@ if __name__ == "__main__":
     season = half_year
     
     # caricamento insieme dati e verifica tipo delle colonne (solo per controllo)
-    """
-    data = pd.read_csv('./Dati_Albignasego/Whole period.csv')
-    print(data.head())
-    print('\n Data Types:')
-    print(data.dtypes)
-    """
     # L'insieme di dati contiene la data e il numero di capi di abbigliamento venduti
     # in quel giorno (per tipo).
     # Faccio in modo che la data sia letta per ottenere una serie temporale

@@ -36,8 +36,7 @@ def kpss_test(timeseries):
     else:
         print("La serie non è trend stazionaria (test kpss)")
 
-def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
-    
+def test_stationarity(timeseries, temporalwindow, boolprint, position=0):    
     """
     Utilizza il metodo Dickey-Fuller per ricavare i dati sulla stazionarietà
     della serie.
