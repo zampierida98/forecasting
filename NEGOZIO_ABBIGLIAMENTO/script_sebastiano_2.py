@@ -219,6 +219,11 @@ if __name__ == "__main__":
     trend_predictions, _, confidence_int = trend_fitted.forecast(steps = len(valid))
     ts_trend_predictions = pd.Series(trend_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
 
+    trend_modfit = pd.Series(trend_fitted.fittedvalues, index=pd.date_range(start=ts.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D'))
+    if best[1] == 1:
+        trend_modfit[0] = trend[0]
+        trend_modfit = trend_modfit.cumsum()
+
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(trend, label='trend')
     plt.plot(ts_trend_predictions, label='previsione trend')
@@ -259,6 +264,11 @@ if __name__ == "__main__":
     
     residuals_predictions, _, confidence_int = residuals_fitted.forecast(steps = len(valid))
     ts_residuals_predictions = pd.Series(residuals_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
+    residuals_modfit = residuals_fitted.fittedvalues
+    residuals_modfit = pd.Series(residuals_fitted.fittedvalues, index=pd.date_range(start=ts.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D'))
+    if best[1] == 1:
+        residuals_modfit[0] = residuals[0]
+        residuals_modfit = residuals_modfit.cumsum()
 
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(residuals, label='residui')
@@ -291,7 +301,7 @@ if __name__ == "__main__":
     
     # Torno alla forma iniziale sommando le componenti
     
-    model = trend_fitted.fittedvalues + residuals_fitted.fittedvalues + seasonality
+    model = trend_modfit + residuals_modfit + seasonality
             
     # Calcolo le previsioni (per un periodo come valid, con cui fare il confronto
     # per determinarne la bontà)

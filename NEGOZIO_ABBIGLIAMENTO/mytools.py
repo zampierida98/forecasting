@@ -235,7 +235,7 @@ def ac_pac_function(timeseries, pos1=0, pos2=0, lags=20):
         lags -> [OPZIONALE] dimensione del grafico (intero)\n
     """
     
-    lag_acf = acf(timeseries, nlags=lags)
+    lag_acf = acf(timeseries, nlags=lags, fft=True)
     lag_pacf = pacf(timeseries, nlags=lags, method='ols')
     
     if pos1==0 and pos2==0:
