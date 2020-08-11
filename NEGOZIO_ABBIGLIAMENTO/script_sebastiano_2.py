@@ -63,7 +63,7 @@ if __name__ == "__main__":
     half_year = 183
     
     # STAGIONE 
-    season = half_year
+    season = year
     
     # caricamento insieme dati e verifica tipo delle colonne (solo per controllo)
     # L'insieme di dati contiene la data e il numero di capi di abbigliamento venduti
@@ -186,7 +186,12 @@ if __name__ == "__main__":
     #%%
     
     # genero le previsioni della componente trend
+    # ordine 5,0,4 con stagione 183
+    # ordine 5,1,5 con stagione 365
     
+    best = [5, 1, 5]
+    
+    """
     best = None
     best_AIC = None
     for param in pdq:
@@ -204,7 +209,8 @@ if __name__ == "__main__":
             continue
     
     print('Gli ordini scelti per il trend sono {} con un AIC di {}'.format(best, best_AIC))
-        
+    """
+    
     trend_model = ARIMA(trend, order=best)
     trend_fitted = trend_model.fit()
     
@@ -221,7 +227,12 @@ if __name__ == "__main__":
     #%%
     
     # genero le previsioni della componente residuals
+    # ordine 5,0,5 con stagione 183
+    # ordine 5,0,5 con stagione 365
     
+    best = [5, 0, 5]    
+
+    """
     best = None
     best_AIC = None
     for param in pdq:
@@ -239,7 +250,8 @@ if __name__ == "__main__":
             continue
         
     print('Gli ordini scelti per i residui sono {} con un AIC di {}'.format(best, best_AIC))
-        
+    """
+    
     residuals_model = ARIMA(residuals, order=best)
     residuals_fitted = residuals_model.fit()
     
