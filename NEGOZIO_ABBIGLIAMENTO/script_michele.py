@@ -78,11 +78,11 @@ def plotAcf(ts, isPacf=False, both=False, lags=40, title=""):
     -------
     None.
     '''
-    # calcoliamo le funzioni di autocorrelazione e di autocorrelazione parziale
+    # Calcoliamo le funzioni di autocorrelazione e di autocorrelazione parziale
     auto_cor = acf(ts, nlags=lags, fft=True)
     part_auto_cor = pacf(ts, nlags=lags)
     
-    # creiamo il grafico
+    # Creiamo il grafico
     plt.figure(figsize=(40, 20), dpi=80)
     
     # se vogliamo o ACF o PACF
@@ -94,18 +94,18 @@ def plotAcf(ts, isPacf=False, both=False, lags=40, title=""):
             plt.plot(part_auto_cor)
             plt.title("PACF di " + title)
         
-        # settiamo le righe che identificano valori non approssimabili come 0
+        # Settiamo le righe che identificano valori non approssimabili come 0
         plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='red')
         plt.axhline(y=0, linestyle="--", color="red")
         plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='red')
     
-    # se li vogliamo entrambi
+    # Se li vogliamo entrambi
     else:
         plt.subplot(211)
         plt.title("ACF di " + title)
         plt.plot(auto_cor,  label='ACF')
         
-        # settiamo le righe che identificano valori non approssimabili come 0
+        # Settiamo le righe che identificano valori non approssimabili come 0
         plt.axhline(y=-1.96/np.sqrt(len(ts)), linestyle='--',color='red')
         plt.axhline(y=1.96/np.sqrt(len(ts)), linestyle='--',color='red')
         plt.legend(loc='best');
@@ -114,7 +114,7 @@ def plotAcf(ts, isPacf=False, both=False, lags=40, title=""):
         plt.title("PACF di " + title)
         plt.plot(part_auto_cor, label='PACF')
         
-        # settiamo le righe che identificano valori non approssimabili come 0
+        # Settiamo le righe che identificano valori non approssimabili come 0
         plt.axhline(y=-1.96/np.sqrt(len(ts)),linestyle='--',color='red')
         plt.axhline(y=1.96/np.sqrt(len(ts)),linestyle='--',color='red')
     plt.legend(loc='best');
@@ -147,7 +147,7 @@ def test_stationarity(ts):
         dfoutput['Critical Value (%s)' % key] = value
     print(dfoutput);print('\n')
     
-    # cambiando la percentuale e impiegandola più piccola avremmo un maggiore grado di certezza
+    # Cambiando la percentuale e impiegandola più piccola avremmo un maggiore grado di certezza
     
     return dftest[0] < dftest[4]['10%']     # Abbiamo il 90% che la serie sia stazionaria
 
@@ -178,11 +178,11 @@ def p_QForArima(ts_diff, T, lags=40):
     p = 0
     q = 0
     
-    # calcoliamo le funzioni di ACF e PACF della serie differenziata
+    # Calcoliamo le funzioni di ACF e PACF della serie differenziata
     auto_cor = acf(ts_diff, nlags=lags, fft=True)
     part_auto_cor = pacf(ts_diff, nlags=lags)
     
-    # settiamo le righe che identificano valori non approssimabili come 0
+    # Settiamo le righe che identificano valori non approssimabili come 0
     bound = 1.96/((T)**(0.5))
     
     # Determiniamo come p il valore k tale che PACF[k] è minore di bound
@@ -219,7 +219,7 @@ def find_best_model(ts, d=0, max_p=5, max_q=5):
     '''
     
     
-    min_aic = 2**32     # settimo un valore molto alto in modo che la funzione min selezioni il primo valore AIC del primo modello
+    min_aic = 2**32     # Settimo un valore molto alto in modo che la funzione min selezioni il primo valore AIC del primo modello
     p = 0
     q = 0
     result_model = None
@@ -229,10 +229,10 @@ def find_best_model(ts, d=0, max_p=5, max_q=5):
             
             # try non tutti i modelli arima si adattano ai dati
             try:
-                # stampa dell'ordine cosi' l'utente non si innervosisce
+                # Stampa dell'ordine cosi' l'utente non si innervosisce
                 print('order(%d,%d,%d)'%(i,d,j))
                 
-                # definiamo il modello e eseguiamo il fit dei dati.
+                # Definiamo il modello e eseguiamo il fit dei dati.
                 # Il fit determina i migliori coefficiente usando tecniche
                 # simili alla minimizzazione dei residui quadratici
                 
@@ -264,16 +264,16 @@ def strength_seasonal_trend(ts, season=12):
         Grado del trend
 
     '''
-    # decomponiamo la serie temporale
+    # Decomponiamo la serie temporale
     decomposition = seasonal_decompose(ts, period=season)
     
-    # estraiamo le componenti elementari
+    # Estraiamo le componenti elementari
     trend = decomposition.trend
     seasonal = decomposition.seasonal
     residual = decomposition.resid
     
-    # calcoliamo la forza mettendo in rapporto la varianza dei residui con la
-    # serie de-stagionalizzata (per la forza del trend) o la serie de-trendizzata (per la forza stagionale)
+    # Calcoliamo la forza mettendo in rapporto la varianza dei residui con la
+    # Serie de-stagionalizzata (per la forza del trend) o la serie de-trendizzata (per la forza stagionale)
     
     strength_trend = max(0, 1 - residual.var()/(trend + residual).var())
     strength_seasonal = max(0, 1 - residual.var()/(seasonal + residual).var())
@@ -281,10 +281,10 @@ def strength_seasonal_trend(ts, season=12):
     return (strength_seasonal, strength_trend)
 
 if __name__ == "__main__":
-    # defiamo la variabile che indica la stagionalità della serie
+    # Defiamo la variabile che indica la stagionalità della serie
     season = 365
     
-    # carichiamo il file Whole period.csv in un oggetto DataFrame
+    # Carichiamo il file Whole period.csv in un oggetto DataFrame
     dateparser = lambda dates: datetime.datetime.strptime(dates, '%Y-%m-%d')
     dataframe = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col = 0, date_parser=dateparser)
     
@@ -352,7 +352,7 @@ if __name__ == "__main__":
         rolmean = residual.rolling(window=15).mean()
         rolstd = residual.rolling(window=15).std()
 
-        # realizziamo i plot per le rolling mean
+        # Realizziamo i plot per le rolling mean
         plt.figure(figsize=(40, 20), dpi=80)
         plt.title('Studio residui con rolling window su media e dev. standard di %s'%column)
         plt.plot(residual, label='Residui', color = 'black')
@@ -383,11 +383,11 @@ if __name__ == "__main__":
         # Calcoliamo i coefficienti
         p,q = p_QForArima(serie_diff, len(serie_diff))        
         
-        # calcoliamo il modello e poi facciamo il fitting dei dati
+        # Calcoliamo il modello e poi facciamo il fitting dei dati
         model = ARIMA(serie_destagionata, order=(p, int(not isStationary), q))
         results_arima = model.fit(disp=-1)
         
-        # creiamo di ARIMA un oggetto pandas.Series
+        # Creiamo di ARIMA un oggetto pandas.Series
         arima_model = pd.Series(results_arima.fittedvalues, copy=True)
         
         # Grafichiamo la serie de-stagionalizzata insieme al modello ARIMA
@@ -435,11 +435,11 @@ if __name__ == "__main__":
         # 
         # 
         
-        # definiamo h orizzonte di previsione. Rappresenta il salto nel futuro
+        # Definiamo h orizzonte di previsione. Rappresenta il salto nel futuro
         # in numero di giorni
         h = len(serie_totale) - len(seasonal)  # orizzonte     
         
-        # determino l'ultima osservazione del miglior modello
+        # Determino l'ultima osservazione del miglior modello
         last_observation = best_arima_model_con_stag.index[len(best_arima_model_con_stag) - 1]        
         
         # Defiamo la serie temporale che conterra' i valori delle previsioni della componente stagionale
@@ -472,7 +472,7 @@ if __name__ == "__main__":
             tmp[i] = tmp[i]
             
         
-        # creiamo delle previsioni sulla serie stagionale un oggetto pandas.Series 
+        # Creiamo delle previsioni sulla serie stagionale un oggetto pandas.Series 
         ts_seasonal_forecast_h = pd.Series(data=tmp, index=pd.date_range(start=last_observation, periods=h , freq='D'))
         ts_seasonal_forecast = ts_seasonal_forecast.add(ts_seasonal_forecast_h, fill_value=0)#seasonal[pd.date_range
         
@@ -553,7 +553,7 @@ if __name__ == "__main__":
         for i in range(0, new_h):
             intervallo_inf[i] += seasonal_interval_sum[i]
 
-        # rappresentiamo in grigio l'intervallo di previsione a partire dalle
+        # Rappresentiamo in grigio l'intervallo di previsione a partire dalle
         # due liste sopra definiti
         plt.fill_between(pd.date_range(start=last_observation, periods=new_h , freq='D'), 
                          intervallo_sup, 
