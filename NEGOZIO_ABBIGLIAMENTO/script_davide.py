@@ -3,7 +3,6 @@
 Analisi dei dati di un negozio di abbigliamento
 """
 import datetime as dt
-from fbprophet import Prophet
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -409,141 +408,6 @@ def tbats_forecasting(timeseries, h, s, slow=True):
     plt.show()
 
 
-# TODO========================================================================
-def fourier_forecasting(timeseries, m, end_train):
-    """
-    Forecasting con SARIMAX (with Fourier terms) e verifica dell'accuratezza
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    m : int
-        numero di osservazioni in un anno
-    end_train : str
-        l'ultimo anno da considerare nel set di train
-
-    Returns
-    -------
-    float
-        MSE
-
-    """
-    # spezzo la serie temporale in due set (train e test)
-    train = timeseries[:end_train]
-    test = timeseries[str(int(end_train)+1):]
-    
-    # preparo le variabili esogene (Fourier terms)
-    exog = pd.DataFrame({'date': timeseries.index})
-    exog = exog.set_index(pd.PeriodIndex(exog['date'], freq='D'))
-    exog['sin365'] = np.sin(2 * np.pi * exog.index.dayofyear / 365.25)
-    exog['cos365'] = np.cos(2 * np.pi * exog.index.dayofyear / 365.25)
-    exog['sin365_2'] = np.sin(4 * np.pi * exog.index.dayofyear / 365.25)
-    exog['cos365_2'] = np.cos(4 * np.pi * exog.index.dayofyear / 365.25)
-    exog = exog.drop(columns=['date'])
-    
-    exog_to_train = exog.iloc[:(len(timeseries)-len(test))]
-    exog_to_test = exog.iloc[(len(timeseries)-len(test)):]
-    
-    # realizzo il modello con gli ordini ottenuti da pmdarima
-    arima_exog_model = pm.auto_arima(y=train, exogenous=exog_to_train, seasonal=True, m=m, suppress_warnings=True, trace=True)
-    
-    # calcolo la serie temporale dei valori predetti
-    arima_exog_forecast = arima_exog_model.predict(n_periods=len(test), exogenous=exog_to_test)
-    future_dates = pd.date_range(start=ts.index[len(train)], periods=len(test), freq='D')
-    future_series = pd.Series(data=arima_exog_forecast, index=future_dates)
-    
-    # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    plt.figure(figsize=(40, 20), dpi=80)
-    plt.title(timeseries.name)
-    ax = timeseries.plot(label='Observed', color='black')
-    future_series.plot(ax=ax, label='Forecasted test', alpha=.7, color='green')
-    #ax.fill_between(forecasts.index, forecasts[1], forecasts[2], color='k', alpha=.2)
-    plt.legend()
-    plt.show()
-    
-    # calcolo del MSE
-    mse = ((future_series[0] - timeseries) ** 2).mean()
-    return round(mse, 2)
-
-
-def prophet_forecasting(timeseries, h):
-    """
-    Forecasting con Prophet
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    h : int
-        l'orizzonte
-
-    Returns
-    -------
-    DataFrames
-        la serie temporale basata sui risultati del forecast
-
-    """
-    df = pd.DataFrame(data=timeseries.to_numpy(), index=timeseries.index, columns=['y'])
-    df.insert(0, 'ds', timeseries.index)
-    
-    m = Prophet()
-    m.fit(df);
-    future = m.make_future_dataframe(periods=h)
-    forecast = m.predict(future)
-    
-    m.plot(forecast);
-    m.plot_components(forecast);
-    
-    return forecast[len(timeseries):len(timeseries)+h]
-
-
-def accuracy_prophet(timeseries, end_train):
-    """
-    Verifica visuale dell'accuratezza di un modello ARIMA
-
-    Parameters
-    ----------
-    timeseries : Series
-        la serie temporale
-    end_train : str
-        l'ultimo anno da considerare nel set di train
-
-    Returns
-    -------
-    float
-        MSE
-
-    """
-    # spezzo la serie temporale in due set (train e test)
-    train = timeseries[:end_train]
-    test = timeseries[str(int(end_train)+1):]
-    
-    # predico valori per la lunghezza del set di test
-    forecasts = prophet_forecasting(train, len(test))
-    
-    # calcolo la serie temporale dei valori predetti
-    forecasts_dates = pd.date_range(start=ts.index[len(train)], periods=len(test), freq='D')
-    yhat = pd.Series(data=forecasts['yhat'].to_numpy(), index=forecasts_dates)
-    yhat_lower = pd.Series(data=forecasts['yhat_lower'].to_numpy(), index=forecasts_dates)
-    yhat_upper = pd.Series(data=forecasts['yhat_upper'].to_numpy(), index=forecasts_dates)
-    forecasts_series = pd.concat([yhat, yhat_lower, yhat_upper], axis=1)
-    
-    # grafico dei valori predetti in sovrapposizione con quelli del set di test
-    plt.figure()
-    ax = timeseries.plot(label='Observed', figsize=(40,20))
-    forecasts_series[0].plot(ax=ax, label='Forecasted test', alpha=.7)
-    ax.fill_between(forecasts_series[0].index,
-                    forecasts_series[1],
-                    forecasts_series[2], color='k', alpha=.2)
-    plt.legend()
-    plt.show()
-    
-    # calcolo del MSE
-    mse = ((forecasts_series[0] - timeseries) ** 2).mean()
-    return round(mse, 2)
-
-
 # ====================================MAIN====================================
 if __name__ == '__main__':
     data = load_data('Dati_Albignasego/Whole period.csv')
@@ -619,12 +483,3 @@ if __name__ == '__main__':
     # tbats 52:
     tbats_model(new_ts, 0.8, [52, 26], slow=False)
     
-# %% ==================================DEBUG==================================
-timeseries = ts
-train_length = 0.8
-m = 365
-s = [7, 365.25]
-h = 100
-slow=False
-o = (1,0,2)
-so = (1,0,1,7)
