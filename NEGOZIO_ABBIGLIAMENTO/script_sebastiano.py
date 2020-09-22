@@ -1,342 +1,344 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon May  4 13:32:57 2020
+Created on Fri Jun 19 11:35:21 2020
 
 @author: seba3
+
+IMPORTANTE!!!!
+Per installare tensorflow usare pip3!!!
+!pip3 install tensorflow
+
+- l'ultima volta mi sono dimenticato, per i grafici della rolling window in pag 24 
+devi ridurre la dimensione della finestra che al momento sembra rispondere troppo lentamente 
+ai cambi, scrivi inoltre esplicitamente che lunghezza stai usando per la finestra
+
+-domanda: Il grafico di arima in pag 26 è sempre sulla serie differenziata a 365 a cui poi 
+hai aggiunto i valori dell'anno prima giusto? perchè se non è così allora quelle predizioni 
+sono chiaramente in-sample
+
+- riguardo al discorso di sarimax a pag 27: ti sei ricordato di risommare il valore dell'anno 
+prima? perchè io intendevo di applicare il sarimax alla serie differenziata con 365.
 """
 
-#SARIMA (3,0,2)x(1,1,2,7)
-
+import numpy as np
 import datetime
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import datetime as dt
 import mytools as mt
-import pmdarima as pm
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+import datetime as dt
 from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.seasonal import seasonal_decompose
+import itertools
 
-SMALL_SIZE = 28 
-MEDIUM_SIZE = 30 
-BIGGER_SIZE = 32 
- 
-plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
-plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
-plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
-plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
-plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels 
-plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize 
-plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+if __name__ == "__main__":
 
-TRAINING_SET_C = 'black'
-VALIDATION_SET_C = 'black'
-FORECASTS_C = 'red'
-MODEL_RESULTS_C = 'green'
-OTHER_LINES_C = 'orange'
-
-season = 365 #giorni
-season_2 = 7
-
-# caricamento insieme dati e verifica tipo delle colonne
-
-data = pd.read_csv('./Dati_Albignasego/Whole period.csv')
-print(data.head())
-print('\n Data Types:')
-print(data.dtypes)
-
-# L'insieme di dati contiene la data e il numero di capi di abbigliamento venduti
-# in quel giorno (per tipo).
-# Faccio in modo che la data sia letta per ottenere una serie temporale
-
-dateparse = lambda dates: dt.datetime.strptime(dates, '%Y-%m-%d')
-data = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col=0, date_parser=dateparse)
-
-ts_maglie = data['MAGLIE']
-ts_camicie = data['CAMICIE']
-ts_gonne = data['GONNE']
-ts_pantaloni = data['PANTALONI']
-ts_vestiti = data['VESTITI']
-ts_giacche = data['GIACCHE']
-
-#togliere i valori nulli per applicare log!
-#ts_totale = ts_maglie + ts_camicie + ts_gonne + ts_pantaloni + ts_vestiti + ts_giacche
-ts_totale = ts_maglie
-
-#for i in range(1, len(ts_totale)):
-#    ts_totale[i] = ts_totale[i]+1
+    # Costanti per grandezza testo
     
-#ts_totale = ts_totale.drop(labels=[pd.Timestamp('2016-02-29')])
-#print(ts_totale['2016-02'])
-
-train = ts_totale[pd.date_range(start=ts_totale.index[0], end=ts_totale.index[int(len(ts_totale) * 0.8)], freq='D')]
-valid = ts_totale[pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], end = ts_totale.index[int(len(ts_totale))-1], freq='D')]
-#Mi occupo del totale vendite
-
-#Elimino il 29 febbraio 2016 per avere sempre periodi di 365 giorni.
-#train = train.drop(labels=[pd.Timestamp('2016-02-29')])
-ts = train #solo per comodità nella manipolazione dei dati...
-
-plt.figure(figsize=(40, 20), dpi=80)
-plt.title('Serie Maglie: Training set + Validation set')
-plt.ylabel('#Maglie vendute')
-plt.xlabel('Data')
-plt.plot(ts, label="training set", color='black')
-plt.plot(valid, label="validation set", color = 'black', linestyle = '--')
-plt.legend(loc='best')
-plt.plot()
-
-#Test per constatare la stazionarietà di una serie
-mt.test_stationarity(ts, season, True)
-plt.title(label = "Serie iniziale (maglie vendute)")
-#Grafici di autocorrelazione e autocorrelazione parziale
-#mt.ac_pac_function(ts)
-plt.title(label = "Serie iniziale (maglie vendute)")
-#%%
-"""
-import pmdarima as pm
-
-# Seasonal - fit stepwise auto-ARIMA
-
-smodel = pm.auto_arima(train, start_p=1, start_q=1,
-                         test='adf',
-                         max_p=3, max_q=3, m=7,
-                         start_P=0, seasonal=True,
-                         d=None, D=1, trace=True,
-                         error_action='ignore',  
-                         suppress_warnings=True, 
-                         stepwise=True)
-smodel.summary()
-"""
-
-#%%
-
-sarima_model = SARIMAX(train, order=(3,1,2), seasonal_order=(1,1,2,7), enforce_invertibility=False, enforce_stationarity=False)
-sarima_fit = sarima_model.fit(disp = -1, maxiter = 200)
-
-sarima_pred = sarima_fit.predict(start="2018-06-11", end="2019-09-29")
-#get_prediction("2018-06-11", "2018-12-31")
-
-for i in range(1, len(sarima_pred)):
-    if sarima_pred[i] < 0:
-        sarima_pred[i] = 0
+    SMALL_SIZE = 28 
+    MEDIUM_SIZE = 30 
+    BIGGER_SIZE = 32 
+     
+    # Inizializzazione caratteristiche base dei PLOT
+    
+    plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
+    plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
+    plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
+    plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the x tick labels 
+    plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the y tick labels 
+    plt.rc('legend', fontsize=SMALL_SIZE)    # fontsize of the legend
+    plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+    
+    # COLORI
+    
+    TSC = 'black'   # training set
+    VSC = 'black'   # validation set
+    FC = 'red'      # previsioni
+    MRC = 'green'   # model results
+    OLC = 'orange'  # other lines
+    
+    # STAGIONI
+    
+    year = 365 # giorni
+    week = 7
+    half_year = 183
+    
+    # STAGIONE 
+    season = year
+    
+    # caricamento insieme dati e verifica tipo delle colonne (solo per controllo)
+    # L'insieme di dati contiene la data e il numero di capi di abbigliamento venduti
+    # in quel giorno (per tipo).
+    # Faccio in modo che la data sia letta per ottenere una serie temporale
+    
+    dateparse = lambda dates: dt.datetime.strptime(dates, '%Y-%m-%d')
+    data = pd.read_csv('./Dati_Albignasego/Whole period.csv', index_col=0, date_parser=dateparse)
+    
+    # usiamo solo la serie maglie. Il procedimento si può ripetere con ciascun capo...
+    
+    ts = data['MAGLIE'] 
+    
+    # Costanti per spezzare la serie temporale sempre nello stesso punto
+    
+    END_TRAIN = ts.index[int(len(ts) * 0.8)]
+    START_VALID = ts.index[int(len(ts)*0.8)+1]
         
-for i in range(1, len(sarima_fit.fittedvalues)):
-    if sarima_fit.fittedvalues[i] < 0:
-        sarima_fit.fittedvalues[i] = 0
+    # Se si vuole togliere il 29 febbraio 2016 per avere solo anni di 365 giorni. 
+    # Sconsigliato se si considera una stagionalità settimanale in quanto sfalsa di un giorno.
+    """
+    ts = ts.drop(labels=[pd.Timestamp('2016-02-29')])
+    print(ts_totale['2016-02'])
+    """
+    
+    train = ts[pd.date_range(start=ts.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D')]
+    valid = ts[pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')]
+    
+    # Stampa la serie iniziale con suddivisione train e validation (solo per controllo) + rolling mean e std
+    # Finestra temporale di un anno per calcolare media e std in movimento
+    
+    rolmean = ts.rolling(window=year).mean()
+    rolstd = ts.rolling(window=year).std()
+    
+    # Plot della serie iniziale con rolling mean e rolling std (365 giorni e 182 giorni)
+    
+    # ANNO
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 365 giorni)')
+    plt.ylabel('#Maglie vendute')
+    plt.xlabel('Data')
+    plt.plot(train, label="training set", color=TSC)
+    plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
+    plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
+    plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
+    plt.legend(loc='best')
+    plt.show(block=False)
+    plt.plot()
+    
+    # META' ANNO
+    
+    rolmean = ts.rolling(window=half_year).mean()
+    rolstd = ts.rolling(window=half_year).std()
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 182 giorni)')
+    plt.ylabel('#Maglie vendute')
+    plt.xlabel('Data')
+    plt.plot(train, label="training set", color=TSC)
+    plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
+    plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
+    plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
+    plt.legend(loc='best')
+    plt.show(block=False)
+    plt.plot()
+    
+    # SETTIMANA
+    
+    rolmean = ts.rolling(window=week).mean()
+    rolstd = ts.rolling(window=week).std()
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.title('Serie Maglie: training set, validation set, moving average e std (finestra 7 giorni)')
+    plt.ylabel('#Maglie vendute')
+    plt.xlabel('Data')
+    plt.plot(train, label="training set", color=TSC)
+    plt.plot(valid, label="validation set", color =VSC, linestyle = '--')
+    plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
+    plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
+    plt.legend(loc='best')
+    plt.show(block=False)
+    plt.plot()
+    
+    mt.ac_pac_function(train, lags = 400)
+    
+    #%%
+    # Decompongo la serie
+    # con periodo di 365 o 183 giorni (year e half_year)
+    
+    result = seasonal_decompose(train,  model = 'additive', period = season, extrapolate_trend='freq')
 
-predint_xminus = ts[pd.date_range(start="2018-06-11", end ="2019-09-29", freq='D')]
-predint_xplus  = ts[pd.date_range(start="2018-06-11", end ="2019-09-29", freq='D')]
+    #%%
 
-z = 1.96
-sse = sarima_fit.sse
-for i in range(1, len(sarima_pred)):
-    predint_xminus[i] = sarima_pred[i] - z * np.sqrt(sse/len(predint_xminus)+i)
-    predint_xplus[i]  = sarima_pred[i] + z * np.sqrt(sse/len(predint_xplus)+i)
+    trend = result.trend
+    seasonality = result.seasonal
+    residuals = result.resid
+    
+    strength_seasonal = max(0, 1 - residuals.var()/(seasonality + residuals).var())
+    print('La forza della stagionalità di periodo {} è: {}'.format(season, strength_seasonal))
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(trend)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(residuals)
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(seasonality)
+    
+    trend.dropna(inplace = True)
+    seasonality.dropna(inplace = True)
+    residuals.dropna(inplace = True)
+    
+    mt.ac_pac_function(trend, lags = 50)
+    mt.ac_pac_function(residuals, lags = 50)
+    
+    p = q = range(0, 6)
+    d = range(0, 2)
+    pdq = list(itertools.product(p, d, q))
+    
+    #%%
+    
+    # genero le previsioni della componente trend
+    # ordine 5,0,4 con stagione 183
+    # ordine 5,1,5 con stagione 365
+    
+    best = [5, 1, 5]
+    
+    """
+    best = None
+    best_AIC = None
+    for param in pdq:
+        try:
+            mod = ARIMA(trend, order=param)
+            results = mod.fit()
+            print('ARIMA{} - AIC:{}'.format(param, results.aic))
+            if best is None:
+                best = param
+                best_AIC = results.aic
+            elif results.aic < best_AIC:
+                best_AIC = results.aic
+                best = param
+        except:
+            continue
+    
+    print('Gli ordini scelti per il trend sono {} con un AIC di {}'.format(best, best_AIC))
+    """
+    
+    trend_model = ARIMA(trend, order=best)
+    trend_fitted = trend_model.fit()
+    
+    #fitted.summary()
+    
+    trend_predictions, _, confidence_int = trend_fitted.forecast(steps = len(valid))
+    ts_trend_predictions = pd.Series(trend_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
 
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(train, label = "Training set", color = 'black')
-plt.plot(valid, label = "Validation set", color = "black", linestyle = "--")
-plt.plot(sarima_fit.fittedvalues, color='green', label='SARIMAX model')
-plt.plot(sarima_pred, color="red", label='SARIMAX predictions')
-plt.title("Sarimax (3,0,2)x(1,1,2,7)")
-plt.fill_between(pd.date_range(start="2018-06-11", periods=len(valid) , freq='D'), 
-                 predint_xplus, 
-                 predint_xminus, 
-                 color='grey', alpha=.25)
-plt.legend(loc='best')
+    trend_modfit = pd.Series(trend_fitted.fittedvalues, index=pd.date_range(start=ts.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D'))
+    if best[1] == 1:
+        trend_modfit[0] = trend[0]
+        trend_modfit = trend_modfit.cumsum()
 
-# Forecast
-"""
-n_periods = 7
-fitted, confint = smodel.predict(n_periods=n_periods, return_conf_int=True)
-index_of_fc = pd.date_range(train.index[-1], periods = n_periods, freq='MS')
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(trend, label='trend')
+    plt.plot(ts_trend_predictions, label='previsione trend')
+    plt.legend(loc = 'best')
 
-# make series for plotting purpose
-fitted_series = pd.Series(fitted, index=index_of_fc)
-predint_xminus = pd.Series(confint[:, 0], index=index_of_fc)
-predint_xplus = pd.Series(confint[:, 1], index=index_of_fc)
+    #%%
+    
+    # genero le previsioni della componente residuals
+    # ordine 5,0,5 con stagione 183
+    # ordine 5,0,5 con stagione 365
+    
+    best = [5, 0, 5]    
 
-z = 1.96
-sse = fitted.sse
-for i in range(1, len(valid)):
-    predint_xminus[i] = fitted_series[i] - z * np.sqrt(sse/len(valid)+i)
-    predint_xplus[i]  = fitted_series[i] + z * np.sqrt(sse/len(valid)+i)
-
-# Plot
-plt.plot(train)
-plt.plot(fitted_series, color='darkgreen')
-plt.fill_between(predint_xminus.index, 
-                 predint_xminus, 
-                 predint_xplus, 
-                 color='k', alpha=.15)
-
-plt.title("SARIMA - Final Forecast")
-plt.show()
-"""
-"""
-#%%
-#ts è la serie con il tale di capi venduti + 1 per giorno da cui è stato tolto il 29 febbraio 2016
-#ts_log = np.log(ts)
-ts_log = ts
-#mt.test_stationarity(ts_log, season, True)
-#Differenziazione e prove per controllare il funzionamento di cumulative sums...
-ts_log_diff1 = ts_log.diff(periods=season)
-ts_log_diff1.dropna(inplace = True)
-mt.test_stationarity(ts_log_diff1, season, True)
-mt.kpss_test(ts_log_diff1)
-mt.ac_pac_function(ts_log_diff1)
-
-#%%
-
-ts_log_diff2 = ts_log_diff1.diff(periods=season_2)
-ts_log_diff2.dropna(inplace = True)
-mt.test_stationarity(ts_log_diff2, season_2, True)
-mt.kpss_test(ts_log_diff2)
-mt.ac_pac_function(ts_log_diff2)
-
-#%%
-
-#weekly_cumulative_sum = ts_log_diff2.rolling(window=7).sum()
-#weekly_cumulative_sum.dropna(inplace = True)
-
-
-#Controllo funzionamento
-print("\nts_log:")
-print(ts_log.head())
-print("\nts_log_diff:")
-print(ts_log_diff1.head())
-print("\nts_log_diff2:")
-print(ts_log_diff2.head())
-
-#Problema del 29 febbraio...
-restored.iloc[season:] = np.nan
-for d, val in ts_log_diff.iloc[season:].iteritems():
-    restored[d] = restored[d - pd.DateOffset(days=season)] + val
-
-#Risolto problema 29 febbraio!
-restored = ts_log.copy()
-restored.iloc[season:] = np.nan
-counter = 0
-for d, val in ts_log_diff.iloc[season:].iteritems():
-    restored[d] = restored.iloc[counter-season]+val
-    counter+=1
-
-#Test:
-restored1 = mt.cumulative_sums(ts_log_diff2, season, ts_log_diff1)
-restored2 = mt.cumulative_sums(restored1, season, ts_log)
-print("\nRestored1:")
-print(restored1.head())
-print("\nRestored2:")
-print(restored2.head())
-"""
-#%%
-#NUOVO! provo con sarimax per poter applicare una differenziazione "normale" e una con stagionalità
-"""
-sarima_model = SARIMAX(ts_log, order=(4, 1, 3), seasonal_order=(2, 0, 2, 7))#, enforce_invertibility=False, enforce_stationarity=False)
-sarima_fit = sarima_model.fit(disp = -1)
-
-sarima_pred = sarima_fit.forecast(steps = int(len(valid)))
-#get_prediction("2018-06-11", "2018-12-31")
-
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(train, label = "Training set", color = 'black')
-plt.plot(valid, label = "Validation set", color = "black", linestyle = "--")
-plt.plot(sarima_fit.fittedvalues, color='green', label='SARIMAX model')
-plt.plot(sarima_pred, color="red", label='SARIMAX predictions')
-plt.title("Sarima (%d, 1, %d) x (%d, 1, %d, %d)" %(0, 2, 0, 2, season_2))
-plt.legend(loc='best')
-"""
-#%%
-"""
-mt.ac_pac_function(ts_log_diff2)
-p, q = mt.p_q_for_ARIMA(ts_log_diff2)
-print(p, q)
-model = ARIMA(ts_log, order=(p, 1, q))
-results_ARIMA = model.fit(disp=-1)  
-#plt.plot(ts_diff2_log, color='blue', label='2-differenced logged serie')
-
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts_log_diff1, label = "Serie trasformata", color = 'black')
-plt.plot(results_ARIMA.fittedvalues, color='green', label='ARIMA')
-plt.title("Arima (%d, 1, %d)"% (p, q))
-plt.legend(loc='best');
-#plt.title('RSS: %.4f'% sum((results_ARIMA.fittedvalues-ts_log_diff1)**2))
-
-predizione_ARIMA_diff = pd.Series(data = results_ARIMA.fittedvalues, copy = True)
-
-#riporto a originale
-predizione_ARIMA_diff_cumsum = predizione_ARIMA_diff.cumsum()
-predizione_ARIMA_log = pd.Series(ts_log.iloc[0], index = ts_log.index)
-predizione_ARIMA_log = predizione_ARIMA_log.add(predizione_ARIMA_diff_cumsum, fill_value = 0)
-"""
-#%%
-#predizione_ARIMA = np.exp(predizione_ARIMA_log)
-"""
-for i in range(1, len(predizione_ARIMA_log)):
-    predizione_ARIMA_log[i] = predizione_ARIMA_log[i]-1
-
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts, label = 'serie iniziale', color = 'black')
-plt.plot(predizione_ARIMA_log, label ="arima trasformato all' indietro", color = 'green')
-plt.title('RMSE: %.4f'% np.sqrt(sum((predizione_ARIMA_log-ts)**2)/len(ts)))
-plt.legend(loc='best');
-"""
-
-#%%
-"""
-p, q = 2, 2
-
-my_ts = ts_log.diff(periods=365)
-#my_ts = ts_log.diff()
-my_ts.dropna(inplace=True)
-my_stagionalita = ts_log.rolling(window=15).mean()
-
-model = ARIMA(my_ts, order=(p, 0, q))
-results_ARIMA = model.fit(disp=0)  
-#plt.plot(ts_diff2_log, color='blue', label='2-differenced logged serie')
-
-my_arima = pd.Series(results_ARIMA.fittedvalues, copy=True)
-original_scale = my_arima + my_stagionalita
-for i in range(1, len(original_scale)):
-    if original_scale[i] < 0:
-        original_scale[i] = 0
+    """
+    best = None
+    best_AIC = None
+    for param in pdq:
+        try:
+            mod = ARIMA(residuals, order=param)
+            results = mod.fit()
+            print('ARIMA{} - AIC:{}'.format(param, results.aic))
+            if best is None:
+                best = param
+                best_AIC = results.aic
+            elif results.aic < best_AIC:
+                best_AIC = results.aic
+                best = param
+        except:
+            continue
         
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(ts_log, label = "Training set", color = 'black')
-plt.plot(original_scale, color='green', label='ARIMA')
-plt.title("Arima (%d, 1, %d)"% (p, q))
-plt.legend(loc='best');
+    print('Gli ordini scelti per i residui sono {} con un AIC di {}'.format(best, best_AIC))
+    """
+    
+    residuals_model = ARIMA(residuals, order=best)
+    residuals_fitted = residuals_model.fit()
+    
+    #fitted.summary()
+    
+    residuals_predictions, _, confidence_int = residuals_fitted.forecast(steps = len(valid))
+    ts_residuals_predictions = pd.Series(residuals_predictions, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D')) 
+    residuals_modfit = residuals_fitted.fittedvalues
+    residuals_modfit = pd.Series(residuals_fitted.fittedvalues, index=pd.date_range(start=ts.index[0], end=ts.index[int(len(ts) * 0.8)], freq='D'))
+    if best[1] == 1:
+        residuals_modfit[0] = residuals[0]
+        residuals_modfit = residuals_modfit.cumsum()
 
-#%%
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(residuals, label='residui')
+    plt.plot(ts_residuals_predictions, label='previsione residui')
+    plt.legend(loc = 'best')
+    
+    #%%
+    
+    # genere le previsioni della componente stagionale usando il metodo seasonal naive
+    
+    predictions_seasonality = []
+    for i in range (0, len(valid)):
+        if i < season:
+            predictions_seasonality.append(seasonality[len(seasonality)-season+i])
+        else:
+            predictions_seasonality.append(predictions_seasonality[i%season])
+            
+    # produca la serie temporale dalla lista di valori usando come indice le date del validation set        
+            
+    ts_predictions_seasonality = pd.Series(predictions_seasonality, index=pd.date_range(start=ts.index[int(len(ts)*0.8)+1], end = ts.index[int(len(ts))-1], freq='D'))
+            
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(seasonality, label='stagionalità')
+    plt.plot(ts_predictions_seasonality, label='previsione stagionalità')
+    plt.legend(loc='best');
+      
+    #%%  
 
-predictions, _, interval = results_ARIMA.forecast(steps = int(len(valid)))
-predictions = pd.Series(predictions, index=pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], periods=int(len(valid)), freq='D'))
-predictions.dropna(inplace=True)
-plt.figure(figsize=(40, 20), dpi=80)
-plt.plot(train, label='training set', color = 'black')
-plt.plot(valid, color='black', label='validation set', linestyle = '--')
-plt.plot(original_scale, color = 'green', label = 'risultati di ARIMA')
-forecast = predictions+ts_totale.rolling(window=15).mean()
-forecast.dropna(inplace = True)
+    
+    
+    # Torno alla forma iniziale sommando le componenti
+    
+    model = trend_modfit + residuals_modfit + seasonality
+            
+    # Calcolo le previsioni (per un periodo come valid, con cui fare il confronto
+    # per determinarne la bontà)
+    
+    predictions = ts_residuals_predictions + ts_predictions_seasonality + ts_trend_predictions
+    
+    for i in range (0, len(model)):
+        if model[i] < 0:
+            model[i] = 0
+    
+    for i in range (0, len(predictions)):
+        if predictions[i] < 0:
+            predictions[i] = 0
+    
+    # Plot del modello ARIMA con la serie per il training in scala originale
+    
+    plt.figure(figsize=(40, 20), dpi=80)
+    plt.plot(train, label = "Training set", color = 'black')
+    plt.plot(model, color='green', label='modello')
+    plt.plot(valid, color='black', linestyle='--', label = 'Validation set')
+    plt.legend(loc='best');
+    
+    # Per ottenere le previsioni in scala originale devo aggiungere la componente stagionale
+    # (settimanale) che posso ottenere con una media esponenziale o un "approccio naive" ossia
+    # prendendo la stagionalità di k osservazioni passate
+     
+    ci = 1.96 * np.std(predictions)/np.mean(predictions)
+    plt.plot(predictions, color="red", label='previsioni')
+    plt.xlabel('Data')
+    plt.ylabel('#Maglie vendute')
+    plt.legend(loc='best')
+    print(predictions.head())
 
-for i in range(1, len(forecast)):
-    if forecast[i] < 0:
-        forecast[i] = 0
- 
-ci = 1.96 * np.std(forecast)/np.mean(forecast)
-plt.plot(forecast, color="red", label='previsione con ARIMA')
-plt.title('Previsioni con ARIMA(4,1,3)')
-plt.xlabel('Data')
-plt.ylabel('#Maglie vendute')
-plt.legend(loc='best')
-print(predictions.head())
+    #%%
 
-#%%
-
-errore = forecast - valid
-errore.dropna(inplace=True)
-
-print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
-
-"""
+    errore = predictions - valid
+    errore.dropna(inplace=True)
+    
+    print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
+    print('Calcoliamo MSE: %.4f'%(sum((predictions-valid)**2)/len(valid)))
