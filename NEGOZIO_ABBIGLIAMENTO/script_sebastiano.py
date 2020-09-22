@@ -4,20 +4,7 @@ Created on Fri Jun 19 11:35:21 2020
 
 @author: seba3
 
-IMPORTANTE!!!!
-Per installare tensorflow usare pip3!!!
-!pip3 install tensorflow
-
-- l'ultima volta mi sono dimenticato, per i grafici della rolling window in pag 24 
-devi ridurre la dimensione della finestra che al momento sembra rispondere troppo lentamente 
-ai cambi, scrivi inoltre esplicitamente che lunghezza stai usando per la finestra
-
--domanda: Il grafico di arima in pag 26 è sempre sulla serie differenziata a 365 a cui poi 
-hai aggiunto i valori dell'anno prima giusto? perchè se non è così allora quelle predizioni 
-sono chiaramente in-sample
-
-- riguardo al discorso di sarimax a pag 27: ti sei ricordato di risommare il valore dell'anno 
-prima? perchè io intendevo di applicare il sarimax alla serie differenziata con 365.
+Tutte le funzioni utilizzate in questo script sono contenute in mytools.py
 """
 
 import numpy as np
@@ -186,6 +173,8 @@ if __name__ == "__main__":
     #%%
     
     # genero le previsioni della componente trend
+    # in best sono salvati gli ordini con il miglior aic ottenuto
+    # eseguendo la parte commentata sottostante
     # ordine 5,0,4 con stagione 183
     # ordine 5,1,5 con stagione 365
     
@@ -232,6 +221,8 @@ if __name__ == "__main__":
     #%%
     
     # genero le previsioni della componente residuals
+    # in best sono salvati gli ordini con il miglior aic ottenuto
+    # eseguendo la parte commentata sottostante
     # ordine 5,0,5 con stagione 183
     # ordine 5,0,5 con stagione 365
     
