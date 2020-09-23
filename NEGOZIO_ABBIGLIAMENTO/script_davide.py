@@ -38,10 +38,10 @@ def load_data(filename):
 
     """
 	
-	# preparo un indice di tipo datetime
+    # preparo un indice di tipo datetime
     dateparse = lambda dates: dt.datetime.strptime(dates, '%Y-%m-%d')
 	
-	# leggo i dati nel file csv
+    # leggo i dati nel file csv
     data = pd.read_csv(filename, index_col=0, date_parser=dateparse)
 	
     return data
@@ -62,7 +62,7 @@ def ts_plot(timeseries):
 
     """
 	
-	# creo il grafico della serie temporale
+    # creo il grafico della serie temporale
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title(timeseries.name)
     plt.plot(timeseries, color='black')
@@ -84,7 +84,7 @@ def test_stationarity(timeseries):
 
     """
 	
-	# test Dickey-Fuller
+    # test Dickey-Fuller
     print('Results of Dickey-Fuller Test for', timeseries.name, '\n')
     dftest = adfuller(timeseries, autolag='AIC')
     dfoutput = pd.Series(dftest[0:4], index=['Test Statistic', 'p-value', '#Lags Used', 'Number of Observations Used'])
@@ -159,8 +159,8 @@ def sarimax_pmdarima(timeseries, train_length, m):
     model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True,
                           start_p=1, start_q=1, max_p=2, max_q=2, start_P=1, start_Q=1, max_P=2, max_Q=2)
     
-	# stampo i parametri del modello
-	print(model.summary())
+    # stampo i parametri del modello
+    print(model.summary())
     
     # predizioni in-sample
     # http://alkaline-ml.com/pmdarima/modules/generated/pmdarima.arima.ARIMA.html#pmdarima.arima.ARIMA.predict_in_sample
@@ -227,7 +227,7 @@ def sarimax_statsmodels(timeseries, train_length, o, so):
 
     """
 	
-	# controllo se i dati sono settimanali o giornalieri
+    # controllo se i dati sono settimanali o giornalieri
     if so[3] == 52:
         f = 'W-MON'
     else:
@@ -241,8 +241,8 @@ def sarimax_statsmodels(timeseries, train_length, o, so):
     #model = pm.auto_arima(train, seasonal=True, m=m, suppress_warnings=True, trace=True,
                           #start_p=1, start_q=1, max_p=1, max_q=1, start_P=1, start_Q=1, max_P=1, max_Q=1)
     
-	# stampo i parametri del modello e controllo la sua bontà
-	print(model.summary())
+    # stampo i parametri del modello e controllo la sua bontà
+    print(model.summary())
     plt.figure(figsize=(40, 20), dpi=80)
     model.plot_diagnostics(figsize=(40, 20))
     plt.show()
@@ -308,13 +308,13 @@ def tbats_model(timeseries, train_length, s, slow=True):
 
     """
 	
-	# controllo se i dati sono settimanali o giornalieri
+    # controllo se i dati sono settimanali o giornalieri
     if s.count(52) == 1:
         f = 'W-MON'
     else:
         f = 'D'
     
-	# creo il set di train
+    # creo il set di train
     train = timeseries[pd.date_range(start=timeseries.index[0], end=timeseries.index[int(len(timeseries) * train_length)-1], freq=f)]
 
     # adatto il modello ai dati
@@ -373,18 +373,18 @@ def tbats_model(timeseries, train_length, s, slow=True):
 
 # ====================================MAIN====================================
 if __name__ == '__main__':
-	# colonne: MAGLIE, CAMICIE, GONNE, PANTALONI, VESTITI, GIACCHE
+    # colonne: MAGLIE, CAMICIE, GONNE, PANTALONI, VESTITI, GIACCHE
     data = load_data('Dati_Albignasego/Whole period.csv')
 	
-	# analizzo la serie temporale delle MAGLIE
-	ts = data['MAGLIE']
+    # analizzo la serie temporale delle MAGLIE
+    ts = data['MAGLIE']
     
-	# per le altre serie il procedimento è analogo
+    # per le altre serie il procedimento è analogo
     #for col in data.columns:
         #ts = data[col]
         
     # %% Grafici, ACF/PACF, stazionarietà:
-	# grafico della serie temporale
+    # grafico della serie temporale
     ts_plot(ts)
     
     # grafici di autocorrelazione e autocorrelazione parziale
@@ -394,20 +394,20 @@ if __name__ == '__main__':
     test_stationarity(ts) # the test statistic is smaller than the 1% critical values so we can say with 99% confidence that ts is stationary
     
     # %% Stagionalità:
-	# decomposizione
+    # decomposizione
     decomposition = seasonal_decompose(ts, period=365)
     trend = decomposition.trend
     seasonal = decomposition.seasonal
     residual = decomposition.resid
     
-	# grafico della componente stagionale
+    # grafico della componente stagionale
     plt.figure(figsize=(40, 20), dpi=80)
     plt.title('Stagionalità ' + ts.name)
     plt.plot(seasonal)    
     plt.show()
     
     # %% SARIMAX:
-	# modello SARIMAX con stagionalità settimanale (ignoro quella semestrale e annuale)
+    # modello SARIMAX con stagionalità settimanale (ignoro quella semestrale e annuale)
     (o, so) = sarimax_pmdarima(ts, 0.8, 7)
     
     # modello SARIMAX con stagionalità annuale (365 giorni)
@@ -418,7 +418,7 @@ if __name__ == '__main__':
     #sarimax_statsmodels(ts, 0.8, o, new_so) # errore di memoria
     
     # %% TBATS:
-	# modello TBATS con stagionalità settimanale, annuale e semestrale
+    # modello TBATS con stagionalità settimanale, annuale e semestrale
     tbats_model(ts, 0.8, [7, 365.25, 182.625], slow=False)
        
     # %% Aggregazione settimanale dei dati tramite media:
@@ -426,7 +426,7 @@ if __name__ == '__main__':
     adj_ts = ts[2:] # 25-03-2013 è lunedì, 29-09-2019 è domenica
     new_dates = pd.date_range(start=adj_ts.index[0], periods=len(adj_ts)/7, freq='W-MON')
 	
-	# aggrego i dati (tramite media)
+    # aggrego i dati (tramite media)
     new_data = []
     for week in range(0, len(adj_ts), 7):
         somma = 0
@@ -434,11 +434,11 @@ if __name__ == '__main__':
             somma += adj_ts[week+day]
         new_data.append(somma/7)
         
-	# creo la serie temporale con i dati aggregati
+    # creo la serie temporale con i dati aggregati
     new_ts = pd.Series(data=new_data, index=new_dates)
     new_ts.name = ts.name + ' (aggregazione settimanale)'
     
-	# modello SARIMAX con stagionalità annuale (52 settimane)
+    # modello SARIMAX con stagionalità annuale (52 settimane)
     new_so = tuple()
     for i in range(0,len(so)-1):
         new_so += (so[i],)
