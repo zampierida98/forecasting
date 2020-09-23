@@ -13,25 +13,29 @@ Link ai dati della M5 competition (da inserire nella directory `M5_COMPETITION/d
 
 ## Procedura per l'esecuzione degli script
 Per realizzare i programmi abbiamo usato l'IDE Spyder poiché è un ambiente che mette a disposizione
-diverse librerie e perché i grafici vengono visualizzati in maniera ottimale.
+diverse librerie e perché i grafici vengono visualizzati in maniera ottimale. 
 
-NOTA: Spyder usa come interprete IPython quindi eseguendo gli script con Python possono
-esserci differenze nei grafici (le label e le legende si sovrappongono al grafico) e nell'esecuzione
-degli script in quanto possono esserci dei warning che non compaiono in IPython.
+### Procedura 1
+- Scaricare Spyder
+- installare attraverso la console di Spyder (sezione in basso a destra) le librerie con pip (comandi sotto la Procedura 2):
+    * pmdarima
+    * tbats
 
-Serve la versione python almeno 3.7 con le seguenti librerie:
-- matplotlib
-- pandas
-- statsmodels
-- pmdarima
-- sklearn
-- tbats
+### Procedura 2
+- Scaricare IPython (versione>=7.18)
+- installare le seguenti librerie:
+    * matplotlib
+    * pandas
+    * statsmodels
+    * pmdarima
+    * sklearn
+    * tbats
 
 Si possono scaricare con pip
 - pip install matplotlib
 - pip install pandas
 - pip install statsmodels
-- pip install pmdarima
 - pip install sklearn
+- pip install pmdarima
 - pip install tbats
 
