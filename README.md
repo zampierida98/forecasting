@@ -14,6 +14,7 @@ Link ai dati della M5 competition (da inserire nella directory `M5_COMPETITION/d
 ## Procedura per l'esecuzione degli script
 Per realizzare i programmi abbiamo usato l'IDE Spyder poiché è un ambiente che mette a disposizione
 diverse librerie e perché i grafici vengono visualizzati in maniera ottimale. 
+Descriviamo due procedure per eseguire i programmi dove la prima sarebbe la consigliata.
 
 ### Procedura 1
 - Scaricare Spyder
