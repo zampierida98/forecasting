@@ -2,7 +2,7 @@
 Link al diario: https://docs.google.com/document/d/1_r1HHRjRuGP4bbE47mgb6zxnemk_Q8J1uCu5me7eT2c
 
 ## Fasi dello studio dei dati di un negozio di abbigliamento
-- Studio della serie e modello ARIMA: `script_sebastiano.py` (analisi simili anche in `script_michele.py`)
+- Studio della serie e modello ARIMA: `script_sebastiano.py` e analisi simili anche in `script_michele.py` (le previsioni della componente stagionale vengono realizzate usando una media exp con alpha=0.9)
 - Modelli di exponential smoothing: `script_ETS.py`
 - Modello TBATS per stagionalità multiple e confronto con dati aggregati: `script_davide.py`
 
