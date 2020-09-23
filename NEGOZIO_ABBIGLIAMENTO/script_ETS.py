@@ -32,32 +32,34 @@ from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
 
-if __name__ == "__main__":
+# SOPPRIMIAMO I WARNING DI NUMPY
+np.warnings.filterwarnings('ignore')
 
-    # Costanti per grandezza testo
-    
-    SMALL_SIZE = 28 
-    MEDIUM_SIZE = 30 
-    BIGGER_SIZE = 32 
+# Costanti per grandezza testo
+   
+SMALL_SIZE = 28 
+MEDIUM_SIZE = 30 
+BIGGER_SIZE = 32 
      
-    # Inizializzazione caratteristiche base dei PLOT
+# Inizializzazione caratteristiche base dei PLOT
     
-    plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
-    plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
-    plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
-    plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the x tick labels 
-    plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the y tick labels 
-    plt.rc('legend', fontsize=SMALL_SIZE)    # fontsize of the legend
-    plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes 
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title 
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels 
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the x tick labels 
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the y tick labels 
+plt.rc('legend', fontsize=SMALL_SIZE)    # fontsize of the legend
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
     
-    # Settiamo i colori 
+# Settiamo i colori 
     
-    TSC = 'black'   # training set
-    VSC = 'black'   # validation set
-    FC = 'red'      # previsioni
-    MRC = 'green'   # model results
-    OLC = 'orange'  # other lines
-    
+TSC = 'black'   # training set
+VSC = 'black'   # validation set
+FC = 'red'      # previsioni
+MRC = 'green'   # model results
+OLC = 'orange'  # other lines
+
+if __name__ == "__main__":
     # Specifichiamo due stagionalita'
     year = 365 # giorni
     week = 7
@@ -144,7 +146,7 @@ if __name__ == "__main__":
                  predint_xminus, 
                  color='grey', alpha=.25)
     plt.legend(loc='best')
-    plt.plot()
+    plt.show()
     
     # Calcoliamo la variabile d'errore 
     errore = forecasted - valid
@@ -213,7 +215,7 @@ if __name__ == "__main__":
                  predint_xminus, 
                  color='grey', alpha=.25)
     plt.legend(loc='best')
-    plt.plot()
+    plt.show()
     
     # Calcoliamo la variabile d'errore
     errore = model_predictions - valid
@@ -302,7 +304,7 @@ if __name__ == "__main__":
                  predint_xminus, 
                  color='grey', alpha=.25)
     plt.legend(loc='best')
-    plt.plot()
+    plt.show()
 
     # Calcoliamo l'errore
     errore = model_predictions - valid
@@ -312,24 +314,3 @@ if __name__ == "__main__":
     mse = mean_squared_error(valid, model_predictions)
     print('MSE: %f' % mse)
     print("Calcoliamo  MAE=%.4f"%(sum(abs(errore))/len(errore)))
-    
-"""
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-
-df = pd.read_csv('/home/ayhan/international-airline-passengers.csv', 
-                 parse_dates=['Month'], 
-                 index_col='Month'
-)
-df.index.freq = 'MS'
-train, test = df.iloc[:130, 0], df.iloc[130:, 0]
-model = ExponentialSmoothing(train, seasonal='mul', seasonal_periods=12).fit()
-pred = model.predict(start=test.index[0], end=test.index[-1])
-
-plt.plot(train.index, train, label='Train')
-plt.plot(test.index, test, label='Test')
-plt.plot(pred.index, pred, label='Holt-Winters')
-plt.legend(loc='best')
-"""

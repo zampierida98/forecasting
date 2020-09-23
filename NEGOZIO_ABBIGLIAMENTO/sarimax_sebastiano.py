@@ -84,16 +84,11 @@ plt.xlabel('Data')
 plt.plot(ts, label="training set", color='black')
 plt.plot(valid, label="validation set", color = 'black', linestyle = '--')
 plt.legend(loc='best')
-plt.plot()
+plt.show()
 
 #Test per constatare la stazionarietà di una serie
 mt.test_stationarity(ts, season, True)
 print("Calcolo in corso...")
-plt.title(label = "Serie iniziale (maglie vendute)")
-#Grafici di autocorrelazione e autocorrelazione parziale
-#mt.ac_pac_function(ts)
-plt.title(label = "Serie iniziale (maglie vendute)")
-
 #%%
 
 sarima_model = SARIMAX(train, order=(3,1,2), seasonal_order=(1,1,2,7), enforce_invertibility=False, enforce_stationarity=False)
@@ -130,3 +125,4 @@ plt.fill_between(pd.date_range(start="2018-06-11", periods=len(valid) , freq='D'
                  predint_xminus, 
                  color='grey', alpha=.25)
 plt.legend(loc='best')
+plt.show()

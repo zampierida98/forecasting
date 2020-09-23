@@ -62,7 +62,7 @@ def test_stationarity(timeseries, temporalwindow, boolprint, position=0):
         plt.plot(rolstd, color='orange', label='Rolling Std', linestyle = '--',  linewidth=3)
         plt.legend(loc='best')
         plt.title('Rolling Mean & Standard Deviation')
-        plt.show(block=False)
+        plt.show()
 
     # Dickey-Fuller test:
     print('Results of Dickey-Fuller Test:')
@@ -105,7 +105,7 @@ def make_seasonal_stationary(timeseries, temporalwindow, boolprint):
         plt.plot(timeseries, label='ts logaritmica')
         plt.plot(timeseries, color='red', label='moving average della ts logaritmica')
         plt.plot(timeseries_moving_avg_diff, color='green', label='ts logaritmica - moving average')
-        plt.show(block=False)
+        plt.show()
         
     return timeseries_moving_avg_diff
 
@@ -132,7 +132,7 @@ def make_exponential_stationary(timeseries, decayfactor, boolprint):
         plt.plot(timeseries, label='ts_logaritmica')
         plt.plot(expwighted_avg, color='red', label='exponentially weighted moving average')
         plt.plot(ts_log_ewma_diff, color='green', label='ts logaritmica - ewma')
-        plt.show(block=False)
+        plt.show()
     return ts_log_ewma_diff
 
 def log_transform(timeseries):
@@ -216,7 +216,7 @@ def decompose(timeseries):
     plt.plot(residual, label='Residuals')
     plt.legend(loc='best')
     plt.tight_layout()
-    plt.show(block=False)
+    plt.show()
     
     ts_decompose = residual
     ts_decompose.dropna(inplace=True)

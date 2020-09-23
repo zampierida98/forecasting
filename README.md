@@ -11,9 +11,14 @@ Link ai dati della M5 competition (da inserire nella directory `M5_COMPETITION/d
 - Modello ETS con approccio bottom-up e diretto: `m5_competition.py`
 - Modello ARIMA con approccio bottom-up e diretto: `m5_competition_ARIMA.py`
 
-## Guida per eseguire i programmi
+## Procedura per l'esecuzione degli script
 Per realizzare i programmi abbiamo usato l'IDE Spyder poiché è un ambiente che mette a disposizione
 diverse librerie e perché i grafici vengono visualizzati in maniera ottimale.
+
+NOTA: Spyder usa come interprete IPython quindi eseguendo gli script con Python possono
+esserci differenze nei grafici (le label e le legende si sovrappongono al grafico) e nell'esecuzione
+degli script in quanto possono esserci dei warning che non compaiono in IPython.
+
 Serve la versione python almeno 3.7 con le seguenti librerie:
 - matplotlib
 - pandas
