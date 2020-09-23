@@ -63,7 +63,7 @@ def plot(timeseries = [], labels = [], titolo=''):
         plt.plot(serie, label = str(labels[i]), color = COLORPALETTE[i])
         i += 1
     plt.legend(loc='best')
-    plt.show(block=False)
+    plt.show()
     return 
 
 def plot_results(timeseries = [], labels = [], titolo=''):
@@ -104,7 +104,7 @@ def plot_results(timeseries = [], labels = [], titolo=''):
             plt.plot(serie, label = str(labels[i]), color = RESCOLORPALETTE[i])
         i += 1
     plt.legend(loc='best')
-    plt.show(block=False)
+    plt.show()
     return 
 
 def sumrows(dataframe, giorni):
@@ -175,6 +175,7 @@ def autocorrelation(ts = [], lags = 20, titleSpec = ''):
     plt.legend(loc = 'best')
     title = 'Funzione di autocorrelazione: ' + str(titleSpec) 
     plt.title(title)
+    plt.show()
     
 def pautocorrelation(ts = [], lags = 20, titleSpec = '', logbool = False):
     """
@@ -208,6 +209,7 @@ def pautocorrelation(ts = [], lags = 20, titleSpec = '', logbool = False):
     plt.legend(loc = 'best')
     title = 'Funzione di autocorrelazione parziale: ' + str(titleSpec) 
     plt.title(title)
+    plt.show()
 
 def correlation(ts1, ts2):
     '''
@@ -692,6 +694,7 @@ if __name__ == '__main__':
     # abbiamo quelle per "STATO" e infine le vendite "TOTALI"
     
     # partiamo da NEGOZIO & CATEGORIA
+    """
     print('Stime modelli delle previsioni per NEGOZIO & CATEGORIA...')
     
     ind = 0
@@ -707,12 +710,12 @@ if __name__ == '__main__':
         ind += 1
         
     print('Operazione completata')
-    
+
     # %%
     print('Salvo l\'oggetto "tsForecastingNegozioAndCat" su file così da caricarlo in momenti successivi')
     
     save_obj(tsForecastingNegozioAndCat, 'tsForecastingNegozioAndCat.pyobj')
-    
+    """
     # %%
     tsForecastingNegozioAndCat = load_obj('tsForecastingNegozioAndCat.pyobj')
     
