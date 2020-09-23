@@ -98,8 +98,7 @@ if __name__ == "__main__":
     plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
     plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
     plt.legend(loc='best')
-    plt.show(block=False)
-    plt.plot()
+    plt.show()
     
     # META' ANNO
     
@@ -115,8 +114,7 @@ if __name__ == "__main__":
     plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
     plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
     plt.legend(loc='best')
-    plt.show(block=False)
-    plt.plot()
+    plt.show()
     
     # SETTIMANA
     
@@ -132,8 +130,7 @@ if __name__ == "__main__":
     plt.plot(rolmean, color=OLC, label='Rolling Mean',  linewidth=3)
     plt.plot(rolstd, color=OLC, label='Rolling Std', linestyle = '--',  linewidth=3)
     plt.legend(loc='best')
-    plt.show(block=False)
-    plt.plot()
+    plt.show()
     
     mt.ac_pac_function(train, lags = 400)
     
@@ -158,6 +155,7 @@ if __name__ == "__main__":
     plt.plot(residuals)
     plt.figure(figsize=(40, 20), dpi=80)
     plt.plot(seasonality)
+    plt.show()
     
     trend.dropna(inplace = True)
     seasonality.dropna(inplace = True)
@@ -217,6 +215,7 @@ if __name__ == "__main__":
     plt.plot(trend, label='trend')
     plt.plot(ts_trend_predictions, label='previsione trend')
     plt.legend(loc = 'best')
+    plt.show()
 
     #%%
     
@@ -265,6 +264,7 @@ if __name__ == "__main__":
     plt.plot(residuals, label='residui')
     plt.plot(ts_residuals_predictions, label='previsione residui')
     plt.legend(loc = 'best')
+    plt.show()
     
     #%%
     
@@ -285,6 +285,7 @@ if __name__ == "__main__":
     plt.plot(seasonality, label='stagionalità')
     plt.plot(ts_predictions_seasonality, label='previsione stagionalità')
     plt.legend(loc='best');
+    plt.show()
       
     #%%  
 
@@ -324,6 +325,7 @@ if __name__ == "__main__":
     plt.xlabel('Data')
     plt.ylabel('#Maglie vendute')
     plt.legend(loc='best')
+    plt.show()
     print(predictions.head())
 
     #%%
