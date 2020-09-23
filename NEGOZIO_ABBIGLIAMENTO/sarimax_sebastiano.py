@@ -110,8 +110,8 @@ for i in range(1, len(sarima_fit.fittedvalues)):
     if sarima_fit.fittedvalues[i] < 0:
         sarima_fit.fittedvalues[i] = 0
 
-predint_xminus = ts[pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], end = ts_totale.index[int(len(ts_totale))-1], freq='D')]
-predint_xplus  = ts[pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], end = ts_totale.index[int(len(ts_totale))-1], freq='D')]
+predint_xminus = pd.Series.copy(valid)
+predint_xplus  = pd.Series.copy(valid)
 
 z = 1.96
 sse = sarima_fit.sse
