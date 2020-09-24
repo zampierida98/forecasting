@@ -12,31 +12,24 @@ Link ai dati della M5 competition (da inserire nella directory `M5_COMPETITION/d
 - Modello ARIMA con approccio bottom-up e diretto: `m5_competition_ARIMA.py`
 
 ## Procedura per l'esecuzione degli script
-Per realizzare i programmi abbiamo usato l'IDE Spyder poiché è un ambiente che mette a disposizione
-diverse librerie e perché i grafici vengono visualizzati in maniera ottimale. 
-Descriviamo due procedure per eseguire i programmi dove la prima sarebbe la consigliata.
+Per realizzare i programmi è stato usato l'IDE Spyder poiché è un ambiente che mette a disposizione diverse librerie e in cui i grafici vengono visualizzati in maniera ottimale. Descriviamo quindi due procedure per eseguire i programmi dove la prima è la più consigliata.
 
 ### Procedura 1
-- Scaricare Spyder
-- installare attraverso la console di Spyder (sezione in basso a destra) le librerie con pip (comandi sotto la Procedura 2):
-    * pmdarima
-    * tbats
+- Scaricare Spyder tramite Anaconda
+- Installare attraverso la console di Spyder (sezione in basso a destra) le librerie pmdarima e tbats:
+```
+pip install pmdarima tbats
+```
 
 ### Procedura 2
 - Scaricare IPython (versione>=7.18)
-- installare le seguenti librerie:
-    * matplotlib
-    * pandas
-    * statsmodels
-    * pmdarima
-    * sklearn
-    * tbats
-
-Si possono scaricare con pip
-- pip install matplotlib
-- pip install pandas
-- pip install statsmodels
-- pip install sklearn
-- pip install pmdarima
-- pip install tbats
-
+- Installare le seguenti librerie tramite pip:
+	* matplotlib
+	* pandas
+	* statsmodels
+	* pmdarima
+	* sklearn
+	* tbats
+```
+pip install matplotlib pandas statsmodels sklearn pmdarima tbats
+```
