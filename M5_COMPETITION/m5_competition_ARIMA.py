@@ -780,26 +780,7 @@ if __name__ == '__main__':
             print(stateNames[ind], shopNames[ind2] , ':', round(correlation(s,s2),3))
             ind2 += 1
         ind += 1
-    
-    # %%
-    # Usiamo ETS_FORECASTING e ETS_DECOMPOSITION_FORECASTING
-    # PER PREVEDERE LE SERIE TEMPORALI
-    # Serie per stato
-
-    print('Stime modelli delle previsioni per STATO con ARIMA...')
-    
-    #plot([ts, model, forecasting], [stateNames[ind], 'modello', 'previsioni'], 'Previsioni con ETS per '+stateNames[ind])
-    ind = 0
-    for ts in tsVenditeStato:
-        model,forecasting = ARIMA_DECOMPOSITION_FORECASTING(ts,periodo=365, h=1941-1913)
-        mase = HyndmanAndKoehler_error(ts, model)
-        print(f'MASE ARIMA_DECOMPOSITION_FORECASTING DI {stateNames[ind]} = {mase}')
-        model,forecasting = ARIMA_DECOMPOSITION_FORECASTING(ts,periodo=365, h=1941-1913)
-        mase = HyndmanAndKoehler_error(ts, model)
-        print(f'MASE ARIMA_FORECASTING DI {stateNames[ind]} = {mase}')
-        ind+=1
-        
-    print('Operazione completata')'''
+    '''
     
     # %%
     

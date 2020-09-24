@@ -649,27 +649,6 @@ if __name__ == '__main__':
         ind += 1
     
     # %%
-    # Usiamo ETS_FORECASTING e ETS_DECOMPOSITION_FORECASTING
-    # PER PREVEDERE LE SERIE TEMPORALI
-    # Serie per stato
-
-    print('Stime modelli delle previsioni per STATO...')
-    
-    #plot([ts, model, forecasting], [stateNames[ind], 'modello', 'previsioni'], 'Previsioni con ETS per '+stateNames[ind])
-    ind = 0
-    for ts in tsVenditeStato:
-        model,forecasting = ETS_DECOMPOSITION_FORECASTING(ts,periodo=365, h=1941-1913)
-        mase = HyndmanAndKoehler_error(ts, model)
-        print(f'MASE ETS_DECOMPOSITION_FORECASTING DI {stateNames[ind]} = {mase}')
-        model,forecasting = ETS_FORECASTING(ts,periodo=365, h=1941-1913)
-        mase = HyndmanAndKoehler_error(ts, model)
-        print(f'MASE ETS_FORECASTING DI {stateNames[ind]} = {mase}')
-        ind+=1
-        
-    print('Operazione completata')
-    print('Meglio ETS con decomposizione che quello ETS(A,A)')
-    
-    # %%
     
     # NOTA: VEDERE FIGURA PG.4 del doc M5-Competitors-Guide-Final-10-March-2020.docx
 
