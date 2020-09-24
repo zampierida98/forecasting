@@ -59,22 +59,11 @@ ts_pantaloni = data['PANTALONI']
 ts_vestiti = data['VESTITI']
 ts_giacche = data['GIACCHE']
 
-#togliere i valori nulli per applicare log!
-#ts_totale = ts_maglie + ts_camicie + ts_gonne + ts_pantaloni + ts_vestiti + ts_giacche
 ts_totale = ts_maglie
-
-#for i in range(1, len(ts_totale)):
-#    ts_totale[i] = ts_totale[i]+1
-    
-#ts_totale = ts_totale.drop(labels=[pd.Timestamp('2016-02-29')])
-#print(ts_totale['2016-02'])
 
 train = ts_totale[pd.date_range(start=ts_totale.index[0], end=ts_totale.index[int(len(ts_totale) * 0.8)], freq='D')]
 valid = ts_totale[pd.date_range(start=ts_totale.index[int(len(ts_totale)*0.8)+1], end = ts_totale.index[int(len(ts_totale))-1], freq='D')]
-#Mi occupo del totale vendite
 
-#Elimino il 29 febbraio 2016 per avere sempre periodi di 365 giorni.
-#train = train.drop(labels=[pd.Timestamp('2016-02-29')])
 ts = train #solo per comodità nella manipolazione dei dati...
 
 plt.figure(figsize=(40, 20), dpi=80)
@@ -95,7 +84,6 @@ sarima_model = SARIMAX(train, order=(3,1,2), seasonal_order=(1,1,2,7), enforce_i
 sarima_fit = sarima_model.fit(disp = -1, maxiter = 200)
 
 sarima_pred = sarima_fit.predict(start="2018-06-11", end="2019-09-29")
-#get_prediction("2018-06-11", "2018-12-31")
 
 for i in range(1, len(sarima_pred)):
     if sarima_pred[i] < 0:
