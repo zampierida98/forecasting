@@ -33,3 +33,5 @@ pip install pmdarima tbats
 ```
 pip install matplotlib pandas statsmodels sklearn pmdarima tbats
 ```
+
+- I programmi vanno lanciati dentro le rispettive directory poiché usiamo path relativi per accedere ai file
